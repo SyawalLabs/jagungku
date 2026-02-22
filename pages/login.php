@@ -194,7 +194,7 @@ if (isset($_POST['login'])) {
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <h1>🌽 JagungKu</h1>
+                <h1>JagungKu</h1>
                 <p>Modern Farming Dashboard</p>
             </div>
 
@@ -239,7 +239,7 @@ if (isset($_POST['login'])) {
                 </div>
 
                 <div class="footer-text">
-                    <p>© 2025 JagungKu. All rights reserved.</p>
+                    <p>© <?= date('Y') ?> syawallabs.id | All rights reserved.</p>
                 </div>
             </div>
         </div>
