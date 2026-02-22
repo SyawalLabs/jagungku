@@ -5,7 +5,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 <div class="sidebar" id="sidebar">
     <!-- Brand -->
     <div class="sidebar-header">
-        <h4 class="text-white">🌽 JagungKu</h4>
+        <h4 class="text-white">JagungKu</h4>
         <small>Petani Cerdas • Modern Farming</small>
     </div>
 
@@ -69,7 +69,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <li class="nav-item">
             <a href="panen.php" class="nav-link <?= ($current_page == 'panen.php') ? 'active' : '' ?>">
-                <i class="fas fa-corn"></i>
+                <i class="fa-solid fa-wheat-awn"></i>
                 <span>Panen</span>
             </a>
         </li>
@@ -98,7 +98,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </ul>
 
     <div class="sidebar-footer text-center">
-        <p class="mb-1">© 2025 JagungKu</p>
+        <p class="mb-1">© <?= date('Y') ?> syawallabs.id</p>
         <p class="mb-0">v2.0.0 • Modern Farming</p>
+        <hr class="my-2" style="border-color: rgba(255,255,255,0.1);">
+        
     </div>
 </div>

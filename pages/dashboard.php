@@ -57,7 +57,7 @@ $keuntungan = $pendapatan - $modal;
                 <div>
                     <div class="stat-label">Tanam Aktif</div>
                     <div class="stat-value"><?= $tanam_aktif ?> Lahan</div>
-                    <small class="text-primary">3 lahan即将 panen</small>
+                    <small class="text-primary">3 lahan panen</small>
                 </div>
                 <div class="stat-icon">
                     <i class="fas fa-seedling"></i>

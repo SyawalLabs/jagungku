@@ -2,7 +2,7 @@
 include '../config/database.php';
 include '../includes/header.php';
 
-$tahun = $_GET['tahun'] ?? date('Y');
+$tahun = isset($_GET['tahun']) && is_numeric($_GET['tahun']) ? $_GET['tahun'] : date('Y');
 ?>
 
 <!-- Page Header -->
@@ -17,7 +17,8 @@ $tahun = $_GET['tahun'] ?? date('Y');
     <div class="d-flex gap-2">
         <select class="form-control" style="width: 150px;" onchange="window.location='laporan.php?tahun='+this.value">
             <?php
-            for ($th = date('Y'); $th >= date('Y') - 2; $th--) {
+            $tahun_sekarang = date('Y');
+            for ($th = $tahun_sekarang; $th >= $tahun_sekarang - 2; $th--) {
                 $selected = ($th == $tahun) ? 'selected' : '';
                 echo "<option value='$th' $selected>$th</option>";
             }
