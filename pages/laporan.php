@@ -2,39 +2,41 @@
 include '../config/database.php';
 include '../includes/header.php';
 
-// Ambil tahun untuk filter
 $tahun = $_GET['tahun'] ?? date('Y');
 ?>
 
-<h1>💰 Laporan Keuangan & Produksi</h1>
-
-<!-- Filter Tahun -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="GET" class="row">
-            <div class="col-md-2">
-                <select name="tahun" class="form-control" onchange="this.form.submit()">
-                    <?php
-                    for ($th = date('Y'); $th >= date('Y') - 2; $th--) {
-                        $selected = ($th == $tahun) ? 'selected' : '';
-                        echo "<option value='$th' $selected>$th</option>";
-                    }
-                    ?>
-                </select>
-            </div>
-        </form>
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1>
+            <i class="fas fa-file-invoice-dollar"></i>
+            Laporan Keuangan & Produksi
+        </h1>
+        <p class="text-muted mt-2 mb-0">Analisis lengkap usaha tani jagung Anda</p>
+    </div>
+    <div class="d-flex gap-2">
+        <select class="form-control" style="width: 150px;" onchange="window.location='laporan.php?tahun='+this.value">
+            <?php
+            for ($th = date('Y'); $th >= date('Y') - 2; $th--) {
+                $selected = ($th == $tahun) ? 'selected' : '';
+                echo "<option value='$th' $selected>$th</option>";
+            }
+            ?>
+        </select>
+        <button class="btn btn-success" onclick="window.print()">
+            <i class="fas fa-print me-2"></i>Cetak Laporan
+        </button>
     </div>
 </div>
 
 <?php
-// Ambil total modal (biaya perawatan)
+// Calculate totals
 $sql_modal = "SELECT SUM(p.biaya) as total_modal 
               FROM perawatan p
               JOIN musim_tanam m ON p.musim_tanam_id = m.id
               WHERE YEAR(p.tanggal) = '$tahun'";
 $modal = $conn->query($sql_modal)->fetch_assoc()['total_modal'] ?? 0;
 
-// Ambil total pendapatan dari panen
 $sql_pendapatan = "SELECT SUM(total_pendapatan) as total_pendapatan 
                   FROM panen p
                   JOIN musim_tanam m ON p.musim_tanam_id = m.id
@@ -42,181 +44,321 @@ $sql_pendapatan = "SELECT SUM(total_pendapatan) as total_pendapatan
 $pendapatan = $conn->query($sql_pendapatan)->fetch_assoc()['total_pendapatan'] ?? 0;
 
 $keuntungan = $pendapatan - $modal;
-$persen = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
+$roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
 ?>
 
-<!-- Statistik Keuangan -->
-<div class="row mb-4">
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
     <div class="col-md-4">
-        <div class="card bg-danger text-white">
-            <div class="card-body">
-                <h5>Total Modal (Biaya)</h5>
-                <h3>Rp <?= number_format($modal, 0, ',', '.') ?></h3>
+        <div class="stat-card danger">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Modal</div>
+                    <div class="stat-value">Rp <?= number_format($modal, 0) ?></div>
+                </div>
+                <i class="fas fa-arrow-down fa-3x text-danger"></i>
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <h5>Total Pendapatan</h5>
-                <h3>Rp <?= number_format($pendapatan, 0, ',', '.') ?></h3>
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Total Pendapatan</div>
+                    <div class="stat-value">Rp <?= number_format($pendapatan, 0) ?></div>
+                </div>
+                <i class="fas fa-arrow-up fa-3x text-success"></i>
             </div>
         </div>
     </div>
 
     <div class="col-md-4">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <h5>Keuntungan</h5>
-                <h3>Rp <?= number_format($keuntungan, 0, ',', '.') ?></h3>
-                <small>ROI: <?= $persen ?>%</small>
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">Keuntungan</div>
+                    <div class="stat-value">Rp <?= number_format($keuntungan, 0) ?></div>
+                    <small>ROI: <?= $roi ?>%</small>
+                </div>
+                <i class="fas fa-chart-pie fa-3x text-warning"></i>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Grafik Produksi per Bulan -->
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar me-2"></i>Produksi Jagung per Bulan (<?= $tahun ?>)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="produksiChart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line me-2"></i>Modal vs Pendapatan</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="keuanganChart" style="height: 300px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Land Analysis -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5>📈 Grafik Produksi Jagung per Bulan (<?= $tahun ?>)</h5>
+        <h5><i class="fas fa-map-marked-alt me-2"></i>Analisis per Lahan</h5>
     </div>
-    <div class="card-body">
-        <canvas id="grafikProduksi" height="100"></canvas>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Lahan</th>
+                        <th>Luas (Ha)</th>
+                        <th>Jumlah Tanam</th>
+                        <th>Total Panen</th>
+                        <th>Produktivitas</th>
+                        <th>Total Modal</th>
+                        <th>Total Pendapatan</th>
+                        <th>Keuntungan</th>
+                        <th>ROI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $sql = "SELECT l.id, l.nama_lahan, l.luas_hektar,
+                            COUNT(DISTINCT m.id) as jumlah_tanam,
+                            COALESCE(SUM(p.hasil_kg), 0) as total_kg,
+                            COALESCE((SELECT SUM(biaya) FROM perawatan pr WHERE pr.musim_tanam_id IN (SELECT id FROM musim_tanam WHERE lahan_id = l.id)), 0) as total_modal,
+                            COALESCE(SUM(p.total_pendapatan), 0) as total_pendapatan
+                            FROM lahan l
+                            LEFT JOIN musim_tanam m ON l.id = m.lahan_id
+                            LEFT JOIN panen p ON m.id = p.musim_tanam_id
+                            GROUP BY l.id";
+                    $result = $conn->query($sql);
+
+                    $grand_total_modal = 0;
+                    $grand_total_pendapatan = 0;
+                    $grand_total_kg = 0;
+
+                    while ($row = $result->fetch_assoc()) {
+                        $untung = $row['total_pendapatan'] - $row['total_modal'];
+                        $roi_lahan = ($row['total_modal'] > 0) ? round(($untung / $row['total_modal']) * 100) : 0;
+                        $produktivitas = ($row['luas_hektar'] > 0) ? round($row['total_kg'] / $row['luas_hektar']) : 0;
+
+                        $grand_total_modal += $row['total_modal'];
+                        $grand_total_pendapatan += $row['total_pendapatan'];
+                        $grand_total_kg += $row['total_kg'];
+
+                        echo "<tr>";
+                        echo "<td><i class='fas fa-map-marker-alt me-2 text-success'></i>{$row['nama_lahan']}</td>";
+                        echo "<td>{$row['luas_hektar']} Ha</td>";
+                        echo "<td>{$row['jumlah_tanam']}x</td>";
+                        echo "<td>" . number_format($row['total_kg']) . " kg</td>";
+                        echo "<td><span class='badge bg-info'>{$produktivitas} kg/Ha</span></td>";
+                        echo "<td>Rp " . number_format($row['total_modal']) . "</td>";
+                        echo "<td>Rp " . number_format($row['total_pendapatan']) . "</td>";
+                        echo "<td class='" . ($untung >= 0 ? 'text-success' : 'text-danger') . " fw-bold'>Rp " . number_format($untung) . "</td>";
+                        echo "<td><span class='badge " . ($roi_lahan >= 0 ? 'bg-success' : 'bg-danger') . "'>{$roi_lahan}%</span></td>";
+                        echo "</tr>";
+                    }
+                    ?>
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="3" class="text-end">TOTAL:</td>
+                        <td><?= number_format($grand_total_kg) ?> kg</td>
+                        <td></td>
+                        <td>Rp <?= number_format($grand_total_modal) ?></td>
+                        <td>Rp <?= number_format($grand_total_pendapatan) ?></td>
+                        <td colspan="2">Rp <?= number_format($grand_total_pendapatan - $grand_total_modal) ?></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
 </div>
 
-<!-- Grafik Keuangan per Bulan -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5>💰 Grafik Modal vs Pendapatan per Bulan</h5>
-    </div>
-    <div class="card-body">
-        <canvas id="grafikKeuangan" height="100"></canvas>
-    </div>
-</div>
-
-<!-- Rincian per Lahan -->
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h5>📋 Rincian per Lahan (<?= $tahun ?>)</h5>
-    </div>
-    <div class="card-body">
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Lahan</th>
-                    <th>Total Tanam</th>
-                    <th>Total Panen (kg)</th>
-                    <th>Total Modal</th>
-                    <th>Total Pendapatan</th>
-                    <th>Keuntungan</th>
-                    <th>Efisiensi</th>
-                </tr>
-            </thead>
-            <tbody>
+<!-- Production Summary -->
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-trophy me-2"></i>Pencapaian Terbaik</h5>
+            </div>
+            <div class="card-body">
                 <?php
-                $sql = "SELECT l.id, l.nama_lahan,
-                        COUNT(DISTINCT m.id) as jumlah_tanam,
-                        SUM(p.hasil_kg) as total_kg,
-                        COALESCE((SELECT SUM(biaya) FROM perawatan pr WHERE pr.musim_tanam_id IN (SELECT id FROM musim_tanam WHERE lahan_id = l.id)), 0) as total_modal,
-                        COALESCE(SUM(p.total_pendapatan), 0) as total_pendapatan
-                        FROM lahan l
-                        LEFT JOIN musim_tanam m ON l.id = m.lahan_id AND YEAR(m.tanggal_tanam) <= '$tahun'
-                        LEFT JOIN panen p ON m.id = p.musim_tanam_id AND YEAR(p.tanggal_panen) = '$tahun'
-                        GROUP BY l.id";
-                $result = $conn->query($sql);
-
-                while ($row = $result->fetch_assoc()) {
-                    $untung = $row['total_pendapatan'] - $row['total_modal'];
-                    $efisiensi = ($row['total_modal'] > 0) ? round(($untung / $row['total_modal']) * 100) : 0;
-
-                    echo "<tr>";
-                    echo "<td>{$row['nama_lahan']}</td>";
-                    echo "<td>{$row['jumlah_tanam']}x</td>";
-                    echo "<td>" . number_format($row['total_kg'] ?? 0, 0, ',', '.') . " kg</td>";
-                    echo "<td>Rp " . number_format($row['total_modal'], 0, ',', '.') . "</td>";
-                    echo "<td>Rp " . number_format($row['total_pendapatan'], 0, ',', '.') . "</td>";
-                    echo "<td class='" . ($untung >= 0 ? 'text-success' : 'text-danger') . "'>Rp " . number_format($untung, 0, ',', '.') . "</td>";
-                    echo "<td>{$efisiensi}%</td>";
-                    echo "</tr>";
-                }
+                // Best harvest
+                $best = $conn->query("SELECT p.*, l.nama_lahan FROM panen p
+                                    JOIN musim_tanam m ON p.musim_tanam_id = m.id
+                                    JOIN lahan l ON m.lahan_id = l.id
+                                    ORDER BY p.hasil_kg DESC LIMIT 1")->fetch_assoc();
                 ?>
-            </tbody>
-        </table>
+                <div class="d-flex align-items-center gap-3 p-3 bg-light rounded mb-3">
+                    <i class="fas fa-crown fa-3x text-warning"></i>
+                    <div>
+                        <h6 class="mb-1">Panen Terbanyak</h6>
+                        <p class="mb-0">
+                            <strong><?= $best['nama_lahan'] ?? '-' ?></strong> -
+                            <?= number_format($best['hasil_kg'] ?? 0) ?> kg
+                            (<?= isset($best['tanggal_panen']) ? date('d/m/Y', strtotime($best['tanggal_panen'])) : '' ?>)
+                        </p>
+                    </div>
+                </div>
+
+                <?php
+                // Best income
+                $best_income = $conn->query("SELECT p.*, l.nama_lahan FROM panen p
+                                        JOIN musim_tanam m ON p.musim_tanam_id = m.id
+                                        JOIN lahan l ON m.lahan_id = l.id
+                                        ORDER BY p.total_pendapatan DESC LIMIT 1")->fetch_assoc();
+                ?>
+                <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+                    <i class="fas fa-coins fa-3x text-success"></i>
+                    <div>
+                        <h6 class="mb-1">Pendapatan Tertinggi</h6>
+                        <p class="mb-0">
+                            <strong><?= $best_income['nama_lahan'] ?? '-' ?></strong> -
+                            Rp <?= number_format($best_income['total_pendapatan'] ?? 0) ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Komposisi Biaya</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="biayaChart" style="height: 250px;"></canvas>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart Scripts -->
+<script>
+    // Get data for charts
+    <?php
+    $bulan = [];
+    $produksi = [];
+    $modal_bulan = [];
+    $pendapatan_bulan = [];
 
-<?php
-// Ambil data produksi per bulan
-$bulan = [];
-$produksi = [];
-$modal_bulan = [];
-$pendapatan_bulan = [];
+    for ($b = 1; $b <= 12; $b++) {
+        $bulan[] = date('F', mktime(0, 0, 0, $b, 1));
 
-for ($b = 1; $b <= 12; $b++) {
-    $bulan[] = date('F', mktime(0, 0, 0, $b, 1));
-
-    // Produksi
-    $sql = "SELECT SUM(hasil_kg) as total FROM panen p
+        // Production
+        $sql = "SELECT SUM(hasil_kg) as total FROM panen p
             JOIN musim_tanam m ON p.musim_tanam_id = m.id
             WHERE YEAR(p.tanggal_panen) = '$tahun' AND MONTH(p.tanggal_panen) = '$b'";
-    $prod = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
-    $produksi[] = $prod;
+        $prod = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
+        $produksi[] = $prod;
 
-    // Modal
-    $sql = "SELECT SUM(biaya) as total FROM perawatan pr
+        // Modal
+        $sql = "SELECT SUM(biaya) as total FROM perawatan pr
             JOIN musim_tanam m ON pr.musim_tanam_id = m.id
             WHERE YEAR(pr.tanggal) = '$tahun' AND MONTH(pr.tanggal) = '$b'";
-    $mod = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
-    $modal_bulan[] = $mod;
+        $mod = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
+        $modal_bulan[] = $mod;
 
-    // Pendapatan
-    $sql = "SELECT SUM(total_pendapatan) as total FROM panen p
+        // Income
+        $sql = "SELECT SUM(total_pendapatan) as total FROM panen p
             JOIN musim_tanam m ON p.musim_tanam_id = m.id
             WHERE YEAR(p.tanggal_panen) = '$tahun' AND MONTH(p.tanggal_panen) = '$b'";
-    $pend = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
-    $pendapatan_bulan[] = $pend;
-}
-?>
+        $pend = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
+        $pendapatan_bulan[] = $pend;
+    }
 
-<script>
-    // Grafik Produksi
-    new Chart(document.getElementById('grafikProduksi'), {
+    // Cost composition
+    $biaya_pupuk = $conn->query("SELECT SUM(biaya) as total FROM perawatan WHERE jenis='pupuk' AND YEAR(tanggal)='$tahun'")->fetch_assoc()['total'] ?? 0;
+    $biaya_obat = $conn->query("SELECT SUM(biaya) as total FROM perawatan WHERE jenis='obat' AND YEAR(tanggal)='$tahun'")->fetch_assoc()['total'] ?? 0;
+    $biaya_air = $conn->query("SELECT SUM(biaya) as total FROM perawatan WHERE jenis='air' AND YEAR(tanggal)='$tahun'")->fetch_assoc()['total'] ?? 0;
+    $biaya_lain = $modal - ($biaya_pupuk + $biaya_obat + $biaya_air);
+    ?>
+
+    // Production Chart
+    new Chart(document.getElementById('produksiChart'), {
         type: 'bar',
         data: {
             labels: <?= json_encode($bulan) ?>,
             datasets: [{
                 label: 'Produksi (kg)',
                 data: <?= json_encode($produksi) ?>,
-                backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                backgroundColor: '#2c5e2e',
+                borderRadius: 8
             }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
         }
     });
 
-    // Grafik Keuangan
-    new Chart(document.getElementById('grafikKeuangan'), {
+    // Financial Chart
+    new Chart(document.getElementById('keuanganChart'), {
         type: 'line',
         data: {
             labels: <?= json_encode($bulan) ?>,
             datasets: [{
-                    label: 'Modal (Rp)',
+                    label: 'Modal',
                     data: <?= json_encode($modal_bulan) ?>,
-                    borderColor: 'red',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    yAxisID: 'y'
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4
                 },
                 {
-                    label: 'Pendapatan (Rp)',
+                    label: 'Pendapatan',
                     data: <?= json_encode($pendapatan_bulan) ?>,
-                    borderColor: 'green',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    yAxisID: 'y'
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
                 }
             ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    // Cost Composition Chart
+    new Chart(document.getElementById('biayaChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Pupuk', 'Obat Hama', 'Pengairan', 'Lainnya'],
+            datasets: [{
+                data: [<?= $biaya_pupuk ?>, <?= $biaya_obat ?>, <?= $biaya_air ?>, <?= $biaya_lain ?>],
+                backgroundColor: ['#2c5e2e', '#ffc107', '#17a2b8', '#6c757d'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            cutout: '60%'
         }
     });
 </script>
