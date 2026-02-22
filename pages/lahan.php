@@ -4,10 +4,10 @@ include '../includes/header.php';
 
 // Process form
 if (isset($_POST['simpan'])) {
-    $nama = $_POST['nama_lahan'];
-    $luas = $_POST['luas_hektar'];
-    $lokasi = $_POST['lokasi'];
-    $jenis = $_POST['jenis_tanah'];
+    $nama = mysqli_real_escape_string($conn, $_POST['nama_lahan']);
+    $luas = mysqli_real_escape_string($conn, $_POST['luas_hektar']);
+    $lokasi = mysqli_real_escape_string($conn, $_POST['lokasi']);
+    $jenis = mysqli_real_escape_string($conn, $_POST['jenis_tanah']);
 
     $sql = "INSERT INTO lahan (nama_lahan, luas_hektar, lokasi, jenis_tanah) 
             VALUES ('$nama', '$luas', '$lokasi', '$jenis')";
@@ -17,10 +17,50 @@ if (isset($_POST['simpan'])) {
     }
 }
 
+// PERBAIKAN: Proses hapus dengan cek foreign key
 if (isset($_GET['hapus'])) {
-    $id = $_GET['hapus'];
-    $conn->query("DELETE FROM lahan WHERE id=$id");
-    echo "<script>alert('Data lahan berhasil dihapus!'); window.location='lahan.php';</script>";
+    $id = mysqli_real_escape_string($conn, $_GET['hapus']);
+
+    // Cek apakah lahan memiliki data musim tanam
+    $cek = $conn->query("SELECT COUNT(*) as total FROM musim_tanam WHERE lahan_id = $id");
+    $data_cek = $cek->fetch_assoc();
+
+    if ($data_cek['total'] > 0) {
+        // Jika ada data musim tanam, tampilkan pesan error
+        echo "<script>
+            alert('Tidak dapat menghapus lahan ini karena masih memiliki {$data_cek['total']} data musim tanam terkait!\\nHarap hapus data musim tanam terlebih dahulu.');
+            window.location='lahan.php';
+        </script>";
+    } else {
+        // Jika tidak ada data terkait, hapus langsung
+        if ($conn->query("DELETE FROM lahan WHERE id=$id")) {
+            echo "<script>alert('Data lahan berhasil dihapus!'); window.location='lahan.php';</script>";
+        } else {
+            echo "<script>alert('Gagal menghapus data!'); window.location='lahan.php';</script>";
+        }
+    }
+}
+
+// PERBAIKAN: Tambahkan proses edit di file yang sama (gabungkan dengan lahan_edit.php)
+if (isset($_POST['edit'])) {
+    $id = mysqli_real_escape_string($conn, $_POST['id']);
+    $nama = mysqli_real_escape_string($conn, $_POST['nama_lahan']);
+    $luas = mysqli_real_escape_string($conn, $_POST['luas_hektar']);
+    $lokasi = mysqli_real_escape_string($conn, $_POST['lokasi']);
+    $jenis = mysqli_real_escape_string($conn, $_POST['jenis_tanah']);
+
+    $sql = "UPDATE lahan SET 
+            nama_lahan='$nama', 
+            luas_hektar='$luas', 
+            lokasi='$lokasi', 
+            jenis_tanah='$jenis' 
+            WHERE id=$id";
+
+    if ($conn->query($sql)) {
+        echo "<script>alert('Data lahan berhasil diupdate!'); window.location='lahan.php';</script>";
+    } else {
+        echo "<script>alert('Gagal mengupdate data: " . $conn->error . "'); window.location='lahan.php';</script>";
+    }
 }
 ?>
 
@@ -52,6 +92,9 @@ if (isset($_GET['hapus'])) {
             $panen_total = $conn->query("SELECT SUM(hasil_kg) as total FROM panen p 
                                         JOIN musim_tanam m ON p.musim_tanam_id = m.id 
                                         WHERE m.lahan_id = {$row['id']}")->fetch_assoc()['total'] ?? 0;
+
+            // Tentukan apakah lahan bisa dihapus
+            $bisa_dihapus = ($tanam_count == 0);
     ?>
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100">
@@ -60,10 +103,10 @@ if (isset($_GET['hapus'])) {
                             <div>
                                 <h5 class="card-title mb-1">
                                     <i class="fas fa-leaf text-success me-2"></i>
-                                    <?= $row['nama_lahan'] ?>
+                                    <?= htmlspecialchars($row['nama_lahan']) ?>
                                 </h5>
                                 <small class="text-muted">
-                                    <i class="fas fa-map-pin me-1"></i> <?= $row['lokasi'] ?>
+                                    <i class="fas fa-map-pin me-1"></i> <?= htmlspecialchars($row['lokasi']) ?>
                                 </small>
                             </div>
                             <div class="dropdown">
@@ -74,9 +117,15 @@ if (isset($_GET['hapus'])) {
                                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editModal<?= $row['id'] ?>">
                                             <i class="fas fa-edit me-2"></i>Edit
                                         </a></li>
-                                    <li><a class="dropdown-item text-danger" href="?hapus=<?= $row['id'] ?>" onclick="return confirm('Yakin hapus lahan ini?')">
-                                            <i class="fas fa-trash me-2"></i>Hapus
-                                        </a></li>
+                                    <?php if ($bisa_dihapus): ?>
+                                        <li><a class="dropdown-item text-danger" href="?hapus=<?= $row['id'] ?>" onclick="return confirm('Yakin hapus lahan ini?')">
+                                                <i class="fas fa-trash me-2"></i>Hapus
+                                            </a></li>
+                                    <?php else: ?>
+                                        <li><a class="dropdown-item text-muted" href="#" onclick="alert('Tidak dapat menghapus: Lahan ini masih memiliki <?= $tanam_count ?> data musim tanam!')">
+                                                <i class="fas fa-trash me-2 text-muted"></i>Hapus (Tidak Aktif)
+                                            </a></li>
+                                    <?php endif; ?>
                                 </ul>
                             </div>
                         </div>
@@ -85,13 +134,13 @@ if (isset($_GET['hapus'])) {
                             <div class="col-6">
                                 <div class="bg-light p-3 rounded text-center">
                                     <small class="text-muted d-block">Luas</small>
-                                    <span class="h5 mb-0 fw-bold"><?= $row['luas_hektar'] ?> Ha</span>
+                                    <span class="h5 mb-0 fw-bold"><?= htmlspecialchars($row['luas_hektar']) ?> Ha</span>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="bg-light p-3 rounded text-center">
                                     <small class="text-muted d-block">Jenis Tanah</small>
-                                    <span class="h6 mb-0"><?= $row['jenis_tanah'] ?></span>
+                                    <span class="h6 mb-0"><?= htmlspecialchars($row['jenis_tanah']) ?></span>
                                 </div>
                             </div>
                         </div>
@@ -128,20 +177,20 @@ if (isset($_GET['hapus'])) {
                             <h5 class="modal-title">Edit Lahan</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
-                        <form method="POST" action="lahan_edit.php">
+                        <form method="POST">
                             <div class="modal-body">
                                 <input type="hidden" name="id" value="<?= $row['id'] ?>">
                                 <div class="mb-3">
                                     <label class="form-label">Nama Lahan</label>
-                                    <input type="text" name="nama_lahan" class="form-control" value="<?= $row['nama_lahan'] ?>" required>
+                                    <input type="text" name="nama_lahan" class="form-control" value="<?= htmlspecialchars($row['nama_lahan']) ?>" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Luas (Hektar)</label>
-                                    <input type="number" step="0.01" name="luas_hektar" class="form-control" value="<?= $row['luas_hektar'] ?>" required>
+                                    <input type="number" step="0.01" name="luas_hektar" class="form-control" value="<?= htmlspecialchars($row['luas_hektar']) ?>" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Lokasi</label>
-                                    <input type="text" name="lokasi" class="form-control" value="<?= $row['lokasi'] ?>" required>
+                                    <input type="text" name="lokasi" class="form-control" value="<?= htmlspecialchars($row['lokasi']) ?>" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Jenis Tanah</label>
