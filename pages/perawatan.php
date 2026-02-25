@@ -27,7 +27,7 @@ if (isset($_POST['simpan'])) {
 <div class="page-header">
     <div>
         <h1>
-            <i class="fas fa-syringe"></i>
+            <i class="bi bi-clipboard-check-fill"></i>
             Perawatan Tanaman
         </h1>
         <p class="text-muted mt-2 mb-0">Catat semua aktivitas perawatan jagung Anda</p>
@@ -75,9 +75,9 @@ if (isset($_POST['simpan'])) {
                 <div class="d-flex justify-content-between">
                     <div>
                         <div class="stat-label">Lahan</div>
-                        <div class="stat-value h4"><?= $tanam['nama_lahan'] ?></div>
+                        <div class="stat-value h6"><?= $tanam['nama_lahan'] ?></div>
                     </div>
-                    <i class="fas fa-leaf fa-2x text-primary-light"></i>
+                    <i class="bi bi-leaf-fill fa-2x text-primary-light"></i>
                 </div>
             </div>
         </div>
@@ -87,9 +87,9 @@ if (isset($_POST['simpan'])) {
                 <div class="d-flex justify-content-between">
                     <div>
                         <div class="stat-label">Umur Tanaman</div>
-                        <div class="stat-value h4"><?= $umur ?> Hari</div>
+                        <div class="stat-value h6"><?= $umur ?> Hari</div>
                     </div>
-                    <i class="fas fa-clock fa-2x text-warning"></i>
+                    <i class="bi bi-clock-fill fa-2x text-warning"></i>
                 </div>
             </div>
         </div>
@@ -99,9 +99,9 @@ if (isset($_POST['simpan'])) {
                 <div class="d-flex justify-content-between">
                     <div>
                         <div class="stat-label">Total Biaya</div>
-                        <div class="stat-value h4">Rp <?= number_format($total_biaya) ?></div>
+                        <div class="stat-value h6">Rp <?= number_format($total_biaya) ?></div>
                     </div>
-                    <i class="fas fa-dollar-sign fa-2x text-success"></i>
+                    <i class="bi bi-currency-dollar fa-2x text-success"></i>
                 </div>
             </div>
         </div>
@@ -110,50 +110,51 @@ if (isset($_POST['simpan'])) {
     <!-- Form Perawatan -->
     <div class="card mb-4">
         <div class="card-header">
-            <h5><i class="fas fa-plus-circle me-2"></i>Catat Perawatan Baru</h5>
+            <h5><i class="bi bi-plus-circle me-2"></i>Catat Perawatan Baru</h5>
         </div>
         <div class="card-body">
             <form method="POST">
                 <input type="hidden" name="musim_tanam_id" value="<?= $tanam_id ?>">
 
-                <div class="row g-3">
-                    <div class="col-md-2">
+                <!-- Baris 1 -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
                         <label class="form-label">Tanggal</label>
                         <input type="date" name="tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label">Jenis</label>
-                        <select name="jenis" class="form-control" required>
-                            <option value="pupuk">🌿 Pupuk</option>
-                            <option value="obat">🧪 Obat Hama</option>
-                            <option value="air">💧 Pengairan</option>
-                        </select>
+                        <input type="text" name="jenis" class="form-control" placeholder="Pupuk/Obat/Irigasi" required>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label">Nama Item</label>
                         <input type="text" name="item" class="form-control" placeholder="Urea/Decis" required>
                     </div>
 
-                    <div class="col-md-1">
+                    <div class="col-md-3">
                         <label class="form-label">Dosis</label>
                         <input type="text" name="dosis" class="form-control" placeholder="kg/ml">
                     </div>
+                </div>
 
-                    <div class="col-md-2">
+                <!-- Baris 2 -->
+                <div class="row g-3">
+                    <div class="col-md-3">
                         <label class="form-label">Biaya (Rp)</label>
-                        <input type="number" name="biaya" class="form-control format-number" value="0" required>
+                        <input type="number" name="biaya" class="form-control" value="0" required>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <label class="form-label">Keterangan</label>
-                        <div class="input-group">
-                            <input type="text" name="keterangan" class="form-control" placeholder="Catatan">
-                            <button type="submit" name="simpan" class="btn btn-success">
-                                <i class="fas fa-save"></i>
-                            </button>
-                        </div>
+                        <input type="text" name="keterangan" class="form-control" placeholder="Catatan">
+                    </div>
+
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" name="simpan" class="btn btn-success w-100">
+                            <i class="bi bi-save-fill me-1"></i> Simpan
+                        </button>
                     </div>
                 </div>
             </form>
@@ -163,7 +164,7 @@ if (isset($_POST['simpan'])) {
     <!-- Riwayat Perawatan -->
     <div class="card">
         <div class="card-header">
-            <h5><i class="fas fa-history me-2"></i>Riwayat Perawatan</h5>
+            <h5><i class="bi bi-clock-history me-2"></i>Riwayat Perawatan</h5>
             <span class="badge bg-primary">Total: <?= $conn->query("SELECT COUNT(*) as total FROM perawatan WHERE musim_tanam_id=$tanam_id")->fetch_assoc()['total'] ?> kegiatan</span>
         </div>
         <div class="card-body p-0">
@@ -190,7 +191,7 @@ if (isset($_POST['simpan'])) {
 
                         if ($result->num_rows > 0) {
                             while ($row = $result->fetch_assoc()) {
-                                $icon = $row['jenis'] == 'pupuk' ? '🌿' : ($row['jenis'] == 'obat' ? '🧪' : '💧');
+                                $icon = $row['jenis'] == 'pupuk' ? '<i class="bi bi-leaf"></i>' : ($row['jenis'] == 'obat' ? '<i class="bi bi-syringe"></i>' : ($row['jenis'] == 'irigasi' ? '<i class="bi bi-droplet"></i>' : '<i class="bi bi-tools"></i>'));
                                 echo "<tr>";
                                 echo "<td>" . date('d/m/Y', strtotime($row['tanggal'])) . "</td>";
                                 echo "<td>$icon " . ucfirst($row['jenis']) . "</td>";

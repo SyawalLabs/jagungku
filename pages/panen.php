@@ -11,17 +11,33 @@ if (isset($_POST['simpan'])) {
     $pembeli = $_POST['pembeli'];
     $total = $hasil_kg * $harga_jual;
 
-    // Check if already harvested
-    $cek = $conn->query("SELECT * FROM panen WHERE musim_tanam_id=$musim_tanam_id");
+    // Cek apakah sudah panen
+    $cek = $conn->prepare("SELECT id FROM panen WHERE musim_tanam_id = ?");
+    $cek->bind_param("i", $musim_tanam_id);
+    $cek->execute();
+    $cek->store_result();
 
     if ($cek->num_rows > 0) {
-        $conn->query("UPDATE panen SET tanggal_panen='$tanggal_panen', hasil_kg='$hasil_kg', harga_jual='$harga_jual', pembeli='$pembeli', total_pendapatan='$total' WHERE musim_tanam_id=$musim_tanam_id");
+        // Data sudah ada → lakukan UPDATE
+        $stmt = $conn->prepare("UPDATE panen SET tanggal_panen = ?, hasil_kg = ?, harga_jual = ?, pembeli = ?, total_pendapatan = ? WHERE musim_tanam_id = ?");
+        $stmt->bind_param("siiisi", $tanggal_panen, $hasil_kg, $harga_jual, $pembeli, $total, $musim_tanam_id);
+        $stmt->execute();
+        $stmt->close();
     } else {
-        $conn->query("INSERT INTO panen (musim_tanam_id, tanggal_panen, hasil_kg, harga_jual, pembeli, total_pendapatan) VALUES ('$musim_tanam_id', '$tanggal_panen', '$hasil_kg', '$harga_jual', '$pembeli', '$total')");
+        // Data belum ada → lakukan INSERT
+        $stmt = $conn->prepare("INSERT INTO panen (musim_tanam_id, tanggal_panen, hasil_kg, harga_jual, pembeli, total_pendapatan) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("isiiis", $musim_tanam_id, $tanggal_panen, $hasil_kg, $harga_jual, $pembeli, $total);
+        $stmt->execute();
+        $stmt->close();
     }
 
-    // Update status
-    $conn->query("UPDATE musim_tanam SET status='selesai' WHERE id=$musim_tanam_id");
+    $cek->close();
+
+    // Update status musim tanam
+    $updateStatus = $conn->prepare("UPDATE musim_tanam SET status = 'selesai' WHERE id = ?");
+    $updateStatus->bind_param("i", $musim_tanam_id);
+    $updateStatus->execute();
+    $updateStatus->close();
 
     echo "<script>alert('Data panen berhasil disimpan!'); window.location='panen.php';</script>";
 }
@@ -31,13 +47,13 @@ if (isset($_POST['simpan'])) {
 <div class="page-header">
     <div>
         <h1>
-            <i class="fas fa-corn"></i>
+            <i class="bi bi-basket-fill"></i>
             Panen Jagung
         </h1>
         <p class="text-muted mt-2 mb-0">Catat hasil panen dan pendapatan Anda</p>
     </div>
     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#panenModal">
-        <i class="fas fa-plus me-2"></i>Input Panen Baru
+        <i class="bi bi-plus-circle me-2"></i>Input Panen Baru
     </button>
 </div>
 
@@ -56,7 +72,7 @@ $rata_harga = $conn->query("SELECT AVG(harga_jual) as rata FROM panen")->fetch_a
                     <div class="stat-label">Total Panen</div>
                     <div class="stat-value"><?= number_format($total_panen) ?> Kg</div>
                 </div>
-                <i class="fas fa-weight-hanging fa-3x text-success-light"></i>
+                <i class="bi bi-box-seam-fill fa-3x text-success-light"></i>
             </div>
         </div>
     </div>
@@ -68,7 +84,7 @@ $rata_harga = $conn->query("SELECT AVG(harga_jual) as rata FROM panen")->fetch_a
                     <div class="stat-label">Total Pendapatan</div>
                     <div class="stat-value">Rp <?= number_format($total_pendapatan) ?></div>
                 </div>
-                <i class="fas fa-money-bill-wave fa-3x text-primary-light"></i>
+                <i class="bi bi-currency-dollar fa-3x text-primary-light"></i>
             </div>
         </div>
     </div>
@@ -80,7 +96,7 @@ $rata_harga = $conn->query("SELECT AVG(harga_jual) as rata FROM panen")->fetch_a
                     <div class="stat-label">Rata-rata Harga</div>
                     <div class="stat-value">Rp <?= number_format($rata_harga) ?>/kg</div>
                 </div>
-                <i class="fas fa-chart-line fa-3x text-info-light"></i>
+                <i class="bi bi-bar-chart fa-3x text-info-light"></i>
             </div>
         </div>
     </div>
@@ -89,7 +105,7 @@ $rata_harga = $conn->query("SELECT AVG(harga_jual) as rata FROM panen")->fetch_a
 <!-- Harvest History -->
 <div class="card">
     <div class="card-header">
-        <h5><i class="fas fa-history me-2"></i>Riwayat Panen</h5>
+        <h5><i class="bi bi-clock-history me-2"></i>Riwayat Panen</h5>
         <div class="d-flex gap-2">
             <select class="form-control form-control-sm" style="width: auto;" id="tahunFilter">
                 <option value="">Semua Tahun</option>
@@ -140,10 +156,10 @@ $rata_harga = $conn->query("SELECT AVG(harga_jual) as rata FROM panen")->fetch_a
                         }
                     } else {
                         echo "<tr><td colspan='7' class='text-center py-5'>
-                                <i class='fas fa-corn fa-3x text-muted mb-3'></i>
+                                <i class='bi bi-leaf fa-3x text-muted mb-3'></i>
                                 <p class='text-muted'>Belum ada data panen</p>
                                 <button class='btn btn-success' data-bs-toggle='modal' data-bs-target='#panenModal'>
-                                    <i class='fas fa-plus me-2'></i>Input Panen Pertama
+                                    <i class='bi bi-plus-circle me-2'></i>Input Panen Pertama
                                 </button>
                               </td></tr>";
                     }

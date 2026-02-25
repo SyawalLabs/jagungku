@@ -232,10 +232,6 @@ if (isset($_POST['login'])) {
                         <i class="fas fa-user"></i>
                         <span><strong>Admin:</strong> admin / admin123</span>
                     </div>
-                    <div class="cred-item">
-                        <i class="fas fa-user"></i>
-                        <span><strong>Petani:</strong> petani / petani123</span>
-                    </div>
                 </div>
 
                 <div class="footer-text">

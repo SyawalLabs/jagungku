@@ -22,13 +22,13 @@ if (isset($_POST['simpan'])) {
 <div class="page-header">
     <div>
         <h1>
-            <i class="fas fa-seedling"></i>
+            <i class="bi bi-calendar-event-fill"></i>
             Musim Tanam
         </h1>
         <p class="text-muted mt-2 mb-0">Kelola siklus tanam jagung Anda</p>
     </div>
     <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#tanamModal">
-        <i class="fas fa-plus me-2"></i>Catat Tanam Baru
+        <i class="bi bi-plus-circle"></i>Catat Tanam Baru
     </button>
 </div>
 
@@ -36,7 +36,7 @@ if (isset($_POST['simpan'])) {
 <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="aktif-tab" data-bs-toggle="tab" data-bs-target="#aktif" type="button">
-            <i class="fas fa-leaf me-2"></i>Aktif
+            <i class="bi bi-leaf-fill me-2"></i>Aktif
             <span class="badge bg-success ms-2">
                 <?= $conn->query("SELECT COUNT(*) as total FROM musim_tanam WHERE status='aktif'")->fetch_assoc()['total'] ?>
             </span>
@@ -44,7 +44,7 @@ if (isset($_POST['simpan'])) {
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="selesai-tab" data-bs-toggle="tab" data-bs-target="#selesai" type="button">
-            <i class="fas fa-history me-2"></i>Riwayat
+            <i class="bi bi-clock-history me-2"></i>Riwayat
         </button>
     </li>
 </ul>
@@ -85,7 +85,7 @@ if (isset($_POST['simpan'])) {
                                     $warna = $progress > 80 ? 'bg-warning' : ($progress >= 100 ? 'bg-danger' : 'bg-success');
 
                                     echo "<tr>";
-                                    echo "<td><i class='fas fa-map-marker-alt me-2 text-success'></i>{$row['nama_lahan']}</td>";
+                                    echo "<td><i class='bi bi-geo-fill me-2 text-success'></i>{$row['nama_lahan']}</td>";
                                     echo "<td>{$row['nama_bibit']}</td>";
                                     echo "<td>" . date('d/m/Y', strtotime($row['tanggal_tanam'])) . "</td>";
                                     echo "<td><span class='badge bg-secondary'>{$row['umur']} hari</span></td>";
@@ -101,10 +101,10 @@ if (isset($_POST['simpan'])) {
                                     echo "<td>
                                             <div class='d-flex gap-1'>
                                                 <a href='perawatan.php?tanam_id={$row['id']}' class='btn btn-sm btn-info' title='Rawat'>
-                                                    <i class='fas fa-notes-medical'></i>
+                                                    <i class='bi bi-clipboard2-pulse-fill'></i>
                                                 </a>
                                                 <a href='panen.php?tanam_id={$row['id']}' class='btn btn-sm btn-success' title='Panen'>
-                                                    <i class='fas fa-corn'></i>
+                                                    <i class='bi bi-basket-fill'></i>
                                                 </a>
                                             </div>
                                           </td>";
@@ -112,10 +112,10 @@ if (isset($_POST['simpan'])) {
                                 }
                             } else {
                                 echo "<tr><td colspan='7' class='text-center py-5'>
-                                        <i class='fas fa-seedling fa-3x text-muted mb-3'></i>
+                                        <i class='bi bi-leaf-fill fa-3x text-muted mb-3'></i>
                                         <p class='text-muted'>Belum ada musim tanam aktif</p>
                                         <button class='btn btn-success' data-bs-toggle='modal' data-bs-target='#tanamModal'>
-                                            <i class='fas fa-plus me-2'></i>Mulai Tanam
+                                            <i class='bi bi-plus-circle me-2'></i>Mulai Tanam
                                         </button>
                                       </td></tr>";
                             }
@@ -167,7 +167,7 @@ if (isset($_POST['simpan'])) {
                                 }
                             } else {
                                 echo "<tr><td colspan='6' class='text-center py-5'>
-                                        <i class='fas fa-history fa-3x text-muted mb-3'></i>
+                                        <i class='bi bi-clock-history fa-3x text-muted mb-3'></i>
                                         <p class='text-muted'>Belum ada riwayat panen</p>
                                       </td></tr>";
                             }

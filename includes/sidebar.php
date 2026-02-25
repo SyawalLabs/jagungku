@@ -33,7 +33,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <li class="nav-item">
             <a href="dashboard.php" class="nav-link <?= ($current_page == 'dashboard.php') ? 'active' : '' ?>">
-                <i class="fas fa-chart-pie"></i>
+                <i class="bi bi-grid-fill"></i>
                 <span>Dashboard</span>
             </a>
         </li>
@@ -44,7 +44,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <li class="nav-item">
             <a href="lahan.php" class="nav-link <?= ($current_page == 'lahan.php') ? 'active' : '' ?>">
-                <i class="fas fa-map-marked-alt"></i>
+                <i class="bi bi-database-fill"></i>
                 <span>Data Lahan</span>
             </a>
         </li>
@@ -55,21 +55,21 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <li class="nav-item">
             <a href="tanam.php" class="nav-link <?= ($current_page == 'tanam.php') ? 'active' : '' ?>">
-                <i class="fas fa-seedling"></i>
+                <i class="bi bi-calendar-event-fill"></i>
                 <span>Musim Tanam</span>
             </a>
         </li>
 
         <li class="nav-item">
             <a href="perawatan.php" class="nav-link <?= ($current_page == 'perawatan.php') ? 'active' : '' ?>">
-                <i class="fas fa-syringe"></i>
+                <i class="bi bi-clipboard-check-fill"></i>
                 <span>Perawatan</span>
             </a>
         </li>
 
         <li class="nav-item">
             <a href="panen.php" class="nav-link <?= ($current_page == 'panen.php') ? 'active' : '' ?>">
-                <i class="fa-solid fa-wheat-awn"></i>
+                <i class="bi bi-basket-fill"></i>
                 <span>Panen</span>
             </a>
         </li>
@@ -80,7 +80,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <li class="nav-item">
             <a href="laporan.php" class="nav-link <?= ($current_page == 'laporan.php') ? 'active' : '' ?>">
-                <i class="fas fa-file-invoice-dollar"></i>
+                <i class="bi bi-cash-stack"></i>
                 <span>Keuangan & Produksi</span>
             </a>
         </li>
@@ -91,7 +91,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
 
         <li class="nav-item">
             <a href="logout.php" class="nav-link text-white" onclick="return confirm('Yakin ingin logout?')">
-                <i class="fas fa-sign-out-alt"></i>
+                <i class="bi bi-box-arrow-left"></i>
                 <span>Logout</span>
             </a>
         </li>

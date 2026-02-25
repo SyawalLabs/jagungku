@@ -19,17 +19,17 @@ $keuntungan = $pendapatan - $modal;
 <div class="page-header">
     <div>
         <h1>
-            <i class="fas fa-chart-pie"></i>
+            <i class="bi bi-grid-fill"></i>
             Dashboard Utama
         </h1>
         <p class="text-muted mt-2 mb-0">Selamat datang, <?= $_SESSION['nama'] ?? 'Petani' ?>! Berikut ringkasan lahan Anda.</p>
     </div>
     <div class="d-flex gap-2">
         <span class="badge">
-            <i class="fas fa-calendar me-1"></i> <?= date('d F Y') ?>
+            <i class="bi bi-calendar-event-fill me-1"></i> <?= date('d F Y') ?>
         </span>
         <span class="badge" style="background: var(--primary);">
-            <i class="fas fa-cloud-sun me-1"></i> Musim Kemarau
+            <i class="bi bi-cloud-sun-fill me-1"></i> Musim Kemarau
         </span>
     </div>
 </div>
@@ -45,7 +45,7 @@ $keuntungan = $pendapatan - $modal;
                     <small class="text-success">+2.5% dari bulan lalu</small>
                 </div>
                 <div class="stat-icon">
-                    <i class="fas fa-leaf"></i>
+                    <i class="bi bi-leaf"></i>
                 </div>
             </div>
         </div>
@@ -60,7 +60,7 @@ $keuntungan = $pendapatan - $modal;
                     <small class="text-primary">3 lahan panen</small>
                 </div>
                 <div class="stat-icon">
-                    <i class="fas fa-seedling"></i>
+                    <i class="bi bi-patch-check"></i>
                 </div>
             </div>
         </div>
@@ -75,7 +75,7 @@ $keuntungan = $pendapatan - $modal;
                     <small class="text-warning">Target: 2.500 Kg</small>
                 </div>
                 <div class="stat-icon">
-                    <i class="fas fa-corn"></i>
+                    <i class="bi bi-basket-fill"></i>
                 </div>
             </div>
         </div>
@@ -90,7 +90,7 @@ $keuntungan = $pendapatan - $modal;
                     <small class="text-info">ROI: 65%</small>
                 </div>
                 <div class="stat-icon">
-                    <i class="fas fa-dollar-sign"></i>
+                    <!-- <i class="bi bi-graph-up-arrow"></i> -->
                 </div>
             </div>
         </div>
@@ -102,10 +102,10 @@ $keuntungan = $pendapatan - $modal;
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-line me-2"></i>Produksi Jagung 6 Bulan Terakhir</h5>
+                <h5><i class="bi bi-bar-chart-line-fill"></i>Produksi Jagung 6 Bulan Terakhir</h5>
                 <div class="d-flex gap-2">
                     <span class="badge bg-primary-light">Kg</span>
-                    <span class="badge bg-primary-light">2025</span>
+                    <span class="badge bg-primary-light"><?= date('Y') ?></span>
                 </div>
             </div>
             <div class="card-body">
@@ -117,17 +117,16 @@ $keuntungan = $pendapatan - $modal;
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-pie me-2"></i>Distribusi Lahan</h5>
+                <h5><i class="bi bi-diagram-3-fill"></i></i>Distribusi Lahan</h5>
             </div>
-            <div class="card-body">
-                <canvas id="lahanChart" style="height: 250px;"></canvas>
+            <div class="chart-container" style="height: 350px;">
+                <canvas id="lahanChart"></canvas>
                 <div class="mt-3">
                     <?php
                     $lahan_result = $conn->query("SELECT nama_lahan, luas_hektar FROM lahan");
                     while ($l = $lahan_result->fetch_assoc()) {
                         echo "<div class='d-flex justify-content-between align-items-center mb-2'>";
-                        echo "<span><i class='fas fa-circle me-2' style='color: #2c5e2e;'></i>{$l['nama_lahan']}</span>";
-                        echo "<span class='fw-bold'>{$l['luas_hektar']} Ha</span>";
+                        echo "<span><i class='bi bi-circle-fill me-2' style='color: #2c5e2e;'></i>{$l['nama_lahan']}</span>";
                         echo "</div>";
                     }
                     ?>
@@ -140,9 +139,9 @@ $keuntungan = $pendapatan - $modal;
 <!-- Active Plantations -->
 <div class="card">
     <div class="card-header">
-        <h5><i class="fas fa-leaf me-2 text-success"></i>Lahan Aktif</h5>
+        <h5><i class="bi bi-leaf-fill me-2 text-success"></i>Lahan Aktif</h5>
         <a href="tanam.php" class="btn btn-success btn-sm">
-            <i class="fas fa-plus me-1"></i> Tanam Baru
+            <i class="bi bi-plus-circle"></i> Tanam Baru
         </a>
     </div>
     <div class="card-body p-0">
@@ -176,7 +175,7 @@ $keuntungan = $pendapatan - $modal;
                             $warna = $progress > 80 ? 'bg-warning' : ($progress >= 100 ? 'bg-danger' : 'bg-success');
 
                             echo "<tr>";
-                            echo "<td><i class='fas fa-map-marker-alt me-2 text-success'></i>{$row['nama_lahan']}</td>";
+                            echo "<td><i class='bi bi-geo-fill me-2 text-success'></i>{$row['nama_lahan']}</td>";
                             echo "<td>{$row['nama_bibit']}</td>";
                             echo "<td class='d-none d-md-table-cell'>" . date('d/m/Y', strtotime($row['tanggal_tanam'])) . "</td>";
                             echo "<td><span class='badge bg-secondary'>{$row['umur']} Hari</span></td>";
@@ -192,10 +191,10 @@ $keuntungan = $pendapatan - $modal;
                             echo "<td>
                                     <div class='d-flex gap-1'>
                                         <a href='perawatan.php?tanam_id={$row['id']}' class='btn btn-sm btn-info' data-bs-toggle='tooltip' title='Catat Perawatan'>
-                                            <i class='fas fa-notes-medical'></i>
+                                            <i class='bi bi-clipboard2-pulse-fill'></i>
                                         </a>
                                         <a href='panen.php?tanam_id={$row['id']}' class='btn btn-sm btn-success' data-bs-toggle='tooltip' title='Input Panen'>
-                                            <i class='fas fa-corn'></i>
+                                            <i class='bi bi-basket-fill'></i>
                                         </a>
                                     </div>
                                   </td>";
@@ -203,8 +202,8 @@ $keuntungan = $pendapatan - $modal;
                         }
                     } else {
                         echo "<tr><td colspan='7' class='text-center py-5'>
-                                <i class='fas fa-seedling fa-3x text-muted mb-3'></i>
-                                <p class='text-muted'>Belum ada lahan aktif. <a href='tanam.php'>Mulai tanam sekarang</a></p>
+                                <i class='bi bi-seedling fa-3x text-muted mb-3'></i>
+                                <p class='text-muted'>Belum ada lahan aktif. <a href='tanam.php' class='text-decoration-none btn btn-outline-success ms-2'>Mulai tanam</a></p>
                               </td></tr>";
                     }
                     ?>
@@ -219,7 +218,7 @@ $keuntungan = $pendapatan - $modal;
     <div class="col-md-6">
         <div class="card border-warning">
             <div class="card-header bg-warning bg-opacity-10">
-                <h5 class="text-warning"><i class="fas fa-clock me-2"></i>Jadwal Pupuk Minggu Ini</h5>
+                <h5 class="text-warning"><i class="bi bi-clock-fill me-2"></i>Jadwal Pupuk Minggu Ini</h5>
             </div>
             <div class="card-body">
                 <?php
@@ -238,7 +237,7 @@ $keuntungan = $pendapatan - $modal;
                     if (!empty($jadwal)) {
                         $ada_jadwal = true;
                         echo "<div class='alert alert-warning d-flex align-items-center gap-3 py-2 mb-2'>";
-                        echo "<i class='fas fa-leaf fa-lg'></i>";
+                        echo "<i class='bi bi-leaf fa-lg'></i>";
                         echo "<div><strong>{$row['nama_lahan']}</strong><br>" . implode(', ', $jadwal) . "</div>";
                         echo "</div>";
                     }
@@ -246,7 +245,7 @@ $keuntungan = $pendapatan - $modal;
 
                 if (!$ada_jadwal) {
                     echo "<div class='text-center py-4'>
-                            <i class='fas fa-check-circle fa-3x text-success mb-3'></i>
+                            <i class='bi bi-check-circle fa-3x text-success mb-3'></i>
                             <p class='text-muted'>Tidak ada jadwal pupuk minggu ini</p>
                           </div>";
                 }
@@ -258,7 +257,7 @@ $keuntungan = $pendapatan - $modal;
     <div class="col-md-6">
         <div class="card border-success">
             <div class="card-header bg-success bg-opacity-10">
-                <h5 class="text-success"><i class="fas fa-calendar-check me-2"></i>Estimasi Panen 2 Minggu</h5>
+                <h5 class="text-success"><i class="bi bi-calendar-check-fill me-2"></i>Estimasi Panen 2 Minggu</h5>
             </div>
             <div class="card-body">
                 <?php
@@ -279,7 +278,7 @@ $keuntungan = $pendapatan - $modal;
                     }
                 } else {
                     echo "<div class='text-center py-4'>
-                            <i class='fas fa-calendar fa-3x text-muted mb-3'></i>
+                            <i class='bi bi-calendar fa-3x text-muted mb-3'></i>
                             <p class='text-muted'>Tidak ada jadwal panen</p>
                           </div>";
                 }
@@ -290,6 +289,7 @@ $keuntungan = $pendapatan - $modal;
 </div>
 
 <!-- Charts Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Produksi Chart
     var ctx1 = document.getElementById('produksiChart').getContext('2d');
@@ -321,25 +321,44 @@ $keuntungan = $pendapatan - $modal;
         }
     });
 
-    // Lahan Chart
     var ctx2 = document.getElementById('lahanChart').getContext('2d');
+
+    <?php
+    $labels = [];
+    $values = [];
+    $colors = [];
+
+    $lahan_result = $conn->query("SELECT nama_lahan, luas_hektar, jenis_tanah FROM lahan");
+
+    while ($l = $lahan_result->fetch_assoc()) {
+        $labels[] = $l['nama_lahan'];
+        $values[] = $l['luas_hektar'];
+
+        // warna grafik berdasarkan jenis tanah
+        if ($l['jenis_tanah'] == 'Latosol') {
+            $colors[] = '#8B4513'; // coklat
+        } elseif ($l['jenis_tanah'] == 'Grumosol') {
+            $colors[] = '#4B4B4B'; // abu gelap
+        } elseif ($l['jenis_tanah'] == 'Mediteran') {
+            $colors[] = '#B22222'; // merah bata
+        } elseif ($l['jenis_tanah'] == 'Andosol') {
+            $colors[] = '#2F2F2F'; // hitam abu
+        } else {
+            $colors[] = '#2c5e2e'; // default hijau
+        }
+    }
+    ?>
+
     new Chart(ctx2, {
         type: 'doughnut',
         data: {
-            labels: <?php
-                    $labels = [];
-                    $values = [];
-                    $lahan_result = $conn->query("SELECT nama_lahan, luas_hektar FROM lahan");
-                    while ($l = $lahan_result->fetch_assoc()) {
-                        $labels[] = $l['nama_lahan'];
-                        $values[] = $l['luas_hektar'];
-                    }
-                    echo json_encode($labels);
-                    ?>,
+            labels: <?= json_encode($labels) ?>,
             datasets: [{
+                label: 'Luas Lahan (Ha)',
                 data: <?= json_encode($values) ?>,
-                backgroundColor: ['#2c5e2e', '#4a7b4c', '#6b9c6d', '#8bbd8d'],
-                borderWidth: 0
+                backgroundColor: <?= json_encode($colors) ?>,
+                borderRadius: 5,
+                barThickness: 10
             }]
         },
         options: {
@@ -350,7 +369,11 @@ $keuntungan = $pendapatan - $modal;
                     display: false
                 }
             },
-            cutout: '70%'
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
         }
     });
 </script>

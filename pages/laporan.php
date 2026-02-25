@@ -9,7 +9,7 @@ $tahun = isset($_GET['tahun']) && is_numeric($_GET['tahun']) ? $_GET['tahun'] : 
 <div class="page-header">
     <div>
         <h1>
-            <i class="fas fa-file-invoice-dollar"></i>
+            <i class="bi bi-cash-stack"></i>
             Laporan Keuangan & Produksi
         </h1>
         <p class="text-muted mt-2 mb-0">Analisis lengkap usaha tani jagung Anda</p>
@@ -25,7 +25,7 @@ $tahun = isset($_GET['tahun']) && is_numeric($_GET['tahun']) ? $_GET['tahun'] : 
             ?>
         </select>
         <button class="btn btn-success" onclick="window.print()">
-            <i class="fas fa-print me-2"></i>Cetak Laporan
+            <i class="bi bi-printer-fill me-2"></i>Cetak Laporan
         </button>
     </div>
 </div>
@@ -57,7 +57,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
                     <div class="stat-label">Total Modal</div>
                     <div class="stat-value">Rp <?= number_format($modal, 0) ?></div>
                 </div>
-                <i class="fas fa-arrow-down fa-3x text-danger"></i>
+                <i class="bi bi-wallet2 fa-2x text-danger"></i>
             </div>
         </div>
     </div>
@@ -69,7 +69,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
                     <div class="stat-label">Total Pendapatan</div>
                     <div class="stat-value">Rp <?= number_format($pendapatan, 0) ?></div>
                 </div>
-                <i class="fas fa-arrow-up fa-3x text-success"></i>
+                <i class="bi bi-cash-coin fa-2x text-success"></i>
             </div>
         </div>
     </div>
@@ -82,7 +82,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
                     <div class="stat-value">Rp <?= number_format($keuntungan, 0) ?></div>
                     <small>ROI: <?= $roi ?>%</small>
                 </div>
-                <i class="fas fa-chart-pie fa-3x text-warning"></i>
+                <i class="bi bi-graph-up-arrow fa-2x text-warning"></i>
             </div>
         </div>
     </div>
@@ -93,7 +93,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-bar me-2"></i>Produksi Jagung per Bulan (<?= $tahun ?>)</h5>
+                <h5><i class="bi bi-bar-chart me-2"></i>Produksi Jagung per Bulan (<?= $tahun ?>)</h5>
             </div>
             <div class="card-body">
                 <canvas id="produksiChart" style="height: 300px;"></canvas>
@@ -104,7 +104,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-line me-2"></i>Modal vs Pendapatan</h5>
+                <h5><i class="bi bi-graph-up me-2"></i>Modal vs Pendapatan</h5>
             </div>
             <div class="card-body">
                 <canvas id="keuanganChart" style="height: 300px;"></canvas>
@@ -116,7 +116,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
 <!-- Land Analysis -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5><i class="fas fa-map-marked-alt me-2"></i>Analisis per Lahan</h5>
+        <h5><i class="bi bi-map-fill me-2"></i>Analisis per Lahan</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -161,7 +161,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
                         $grand_total_kg += $row['total_kg'];
 
                         echo "<tr>";
-                        echo "<td><i class='fas fa-map-marker-alt me-2 text-success'></i>{$row['nama_lahan']}</td>";
+                        echo "<td><i class='bi bi-geo-fill me-2 text-success'></i>{$row['nama_lahan']}</td>";
                         echo "<td>{$row['luas_hektar']} Ha</td>";
                         echo "<td>{$row['jumlah_tanam']}x</td>";
                         echo "<td>" . number_format($row['total_kg']) . " kg</td>";
@@ -194,7 +194,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-trophy me-2"></i>Pencapaian Terbaik</h5>
+                <h5><i class="bi bi-trophy-fill me-2"></i>Pencapaian Terbaik</h5>
             </div>
             <div class="card-body">
                 <?php
@@ -205,7 +205,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
                                     ORDER BY p.hasil_kg DESC LIMIT 1")->fetch_assoc();
                 ?>
                 <div class="d-flex align-items-center gap-3 p-3 bg-light rounded mb-3">
-                    <i class="fas fa-crown fa-3x text-warning"></i>
+                    <i class="bi bi-award-fill fa-3x text-warning"></i>
                     <div>
                         <h6 class="mb-1">Panen Terbanyak</h6>
                         <p class="mb-0">
@@ -224,7 +224,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
                                         ORDER BY p.total_pendapatan DESC LIMIT 1")->fetch_assoc();
                 ?>
                 <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
-                    <i class="fas fa-coins fa-3x text-success"></i>
+                    <i class="bi bi-cash-coin fa-3x text-success"></i>
                     <div>
                         <h6 class="mb-1">Pendapatan Tertinggi</h6>
                         <p class="mb-0">
@@ -240,7 +240,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-pie me-2"></i>Komposisi Biaya</h5>
+                <h5><i class="bi bi-pie-chart-fill me-2"></i>Komposisi Biaya</h5>
             </div>
             <div class="card-body">
                 <canvas id="biayaChart" style="height: 250px;"></canvas>
@@ -248,7 +248,7 @@ $roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- Chart Scripts -->
 <script>
     // Get data for charts
