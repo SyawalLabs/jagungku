@@ -14,12 +14,11 @@ if (!isset($_SESSION['user_id']) && basename($_SERVER['PHP_SELF']) != 'login.php
     <title>JagungKu - Dashboard Petani Modern</title>
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
 
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="../assets/bootstrap-icons/bootstrap-icons.css">
 
-<link rel="stylesheet" href="../assets/bootstrap-icons/bootstrap-icons.css">
     <!-- Google Fonts - Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
