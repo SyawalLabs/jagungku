@@ -79,9 +79,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </li>
 
         <li class="nav-item">
-            <a href="laporan.php" class="nav-link <?= ($current_page == 'laporan.php') ? 'active' : '' ?>">
+            <a href="keuangan.php" class="nav-link <?= ($current_page == 'keuangan.php') ? 'active' : '' ?>">
                 <i class="bi bi-cash-stack"></i>
                 <span>Keuangan & Produksi</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="laporan.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'laporan.php' ? 'active' : '' ?>">
+                <i class="bi bi-bar-chart-fill"></i>
+                <span>Laporan</span>
             </a>
         </li>
 
@@ -95,12 +102,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <span>Logout</span>
             </a>
         </li>
+
+
     </ul>
 
     <div class="sidebar-footer text-center">
         <p class="mb-1">© <?= date('Y') ?> syawallabs.id</p>
         <p class="mb-0">v2.0.0 • Modern Farming</p>
         <hr class="my-2" style="border-color: rgba(255,255,255,0.1);">
-        
+
     </div>
 </div>

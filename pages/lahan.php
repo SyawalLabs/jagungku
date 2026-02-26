@@ -111,7 +111,7 @@ if (isset($_POST['edit'])) {
                             </div>
                             <div class="dropdown">
                                 <button class="btn btn-light btn-sm" data-bs-toggle="dropdown">
-                                    <i class="fas fa-ellipsis-v"></i>
+                                    <i class="bi bi-three-dots-vertical"></i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editModal<?= $row['id'] ?>">

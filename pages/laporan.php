@@ -2,366 +2,820 @@
 include '../config/database.php';
 include '../includes/header.php';
 
-$tahun = isset($_GET['tahun']) && is_numeric($_GET['tahun']) ? $_GET['tahun'] : date('Y');
+// Ambil data untuk laporan
+$tahun = isset($_GET['tahun']) ? $_GET['tahun'] : date('Y');
+$bulan = isset($_GET['bulan']) ? $_GET['bulan'] : 'all';
+
+// Query untuk laporan panen dengan join ke musim_tanam, lahan, dan bibit
+$query_panen = "SELECT 
+                    p.id,
+                    p.tanggal_panen,
+                    p.hasil_kg,
+                    p.harga_jual,
+                    p.pembeli,
+                    p.total_pendapatan,
+                    m.tanggal_tanam,
+                    l.nama_lahan,
+                    l.luas_hektar,
+                    l.lokasi,
+                    b.nama_bibit,
+                    b.sumber as sumber_bibit,
+                    DATE_FORMAT(p.tanggal_panen, '%Y-%m') as bulan
+                FROM panen p
+                LEFT JOIN musim_tanam m ON p.musim_tanam_id = m.id
+                LEFT JOIN lahan l ON m.lahan_id = l.id
+                LEFT JOIN bibit b ON m.bibit_id = b.id
+                WHERE YEAR(p.tanggal_panen) = ? ";
+
+if ($bulan != 'all') {
+    $query_panen .= " AND MONTH(p.tanggal_panen) = ? ";
+    $params = [$tahun, $bulan];
+    $types = "si";
+} else {
+    $params = [$tahun];
+    $types = "s";
+}
+
+$query_panen .= " ORDER BY p.tanggal_panen DESC";
+
+$stmt = $conn->prepare($query_panen);
+$stmt->bind_param($types, ...$params);
+$stmt->execute();
+$result_panen = $stmt->get_result();
+
+// Query untuk ringkasan bulanan (statistik per bulan)
+$query_bulanan = "SELECT 
+                    DATE_FORMAT(p.tanggal_panen, '%Y-%m') as bulan,
+                    COUNT(*) as jumlah_panen,
+                    SUM(p.hasil_kg) as total_hasil,
+                    AVG(p.hasil_kg) as rata_rata_hasil,
+                    SUM(p.total_pendapatan) as total_pendapatan,
+                    AVG(p.harga_jual) as rata_rata_harga
+                FROM panen p
+                WHERE YEAR(p.tanggal_panen) = ? ";
+
+if ($bulan != 'all') {
+    $query_bulanan .= " AND MONTH(p.tanggal_panen) = ? ";
+    $params_bulanan = [$tahun, $bulan];
+    $types_bulanan = "si";
+} else {
+    $params_bulanan = [$tahun];
+    $types_bulanan = "s";
+}
+
+$query_bulanan .= " GROUP BY DATE_FORMAT(p.tanggal_panen, '%Y-%m') ORDER BY bulan DESC";
+
+$stmt_bulanan = $conn->prepare($query_bulanan);
+$stmt_bulanan->bind_param($types_bulanan, ...$params_bulanan);
+$stmt_bulanan->execute();
+$result_bulanan = $stmt_bulanan->get_result();
+
+// Query untuk ringkasan tahunan
+$query_ringkasan = "SELECT 
+                        YEAR(p.tanggal_panen) as tahun,
+                        COUNT(*) as total_panen,
+                        SUM(p.hasil_kg) as total_hasil,
+                        SUM(p.total_pendapatan) as total_pendapatan,
+                        AVG(p.harga_jual) as rata_harga,
+                        COUNT(DISTINCT m.lahan_id) as jumlah_lahan,
+                        COUNT(DISTINCT m.bibit_id) as jumlah_bibit
+                    FROM panen p
+                    LEFT JOIN musim_tanam m ON p.musim_tanam_id = m.id
+                    GROUP BY YEAR(p.tanggal_panen)
+                    ORDER BY tahun DESC";
+
+$result_ringkasan = $conn->query($query_ringkasan);
+
+// Query untuk statistik keseluruhan
+$query_statistik = "SELECT 
+                        COUNT(*) as total_transaksi,
+                        SUM(hasil_kg) as total_hasil_keseluruhan,
+                        SUM(total_pendapatan) as total_pendapatan_keseluruhan,
+                        AVG(harga_jual) as rata_rata_harga,
+                        MAX(hasil_kg) as hasil_tertinggi,
+                        MIN(hasil_kg) as hasil_terendah
+                    FROM panen";
+
+$result_statistik = $conn->query($query_statistik);
+$statistik = $result_statistik->fetch_assoc();
+
+// Query untuk statistik berdasarkan lahan
+$query_per_lahan = "SELECT 
+                        l.nama_lahan,
+                        COUNT(p.id) as jumlah_panen,
+                        SUM(p.hasil_kg) as total_hasil,
+                        SUM(p.total_pendapatan) as total_pendapatan,
+                        AVG(p.hasil_kg) as rata_rata_per_panen
+                    FROM lahan l
+                    LEFT JOIN musim_tanam m ON l.id = m.lahan_id
+                    LEFT JOIN panen p ON m.id = p.musim_tanam_id
+                    GROUP BY l.id
+                    HAVING jumlah_panen > 0
+                    ORDER BY total_hasil DESC";
+
+$result_per_lahan = $conn->query($query_per_lahan);
+
+// Query untuk statistik berdasarkan bibit
+$query_per_bibit = "SELECT 
+                        b.nama_bibit,
+                        COUNT(p.id) as jumlah_panen,
+                        SUM(p.hasil_kg) as total_hasil,
+                        AVG(p.hasil_kg) as rata_rata_hasil,
+                        SUM(p.total_pendapatan) as total_pendapatan
+                    FROM bibit b
+                    LEFT JOIN musim_tanam m ON b.id = m.bibit_id
+                    LEFT JOIN panen p ON m.id = p.musim_tanam_id
+                    GROUP BY b.id
+                    HAVING jumlah_panen > 0
+                    ORDER BY total_hasil DESC";
+
+$result_per_bibit = $conn->query($query_per_bibit);
 ?>
 
-<!-- Page Header -->
-<div class="page-header">
-    <div>
-        <h1>
-            <i class="bi bi-cash-stack"></i>
-            Laporan Keuangan & Produksi
-        </h1>
-        <p class="text-muted mt-2 mb-0">Analisis lengkap usaha tani jagung Anda</p>
+<style>
+    .report-container {
+        padding: 20px;
+    }
+
+    .report-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+
+    .filter-section {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+
+    .summary-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .card-icon.green {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .card-icon.blue {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+
+    .card-icon.orange {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .card-icon.purple {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .card-icon.red {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .card-icon.teal {
+        background: #e0f2f1;
+        color: #00695c;
+    }
+
+    .card-info h4 {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 5px;
+    }
+
+    .card-info .value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .card-info .sub-value {
+        font-size: 12px;
+        color: #999;
+    }
+
+    .chart-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+    }
+
+    .table-container {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow-x: auto;
+        margin-bottom: 20px;
+    }
+
+    .table-container:hover {
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .section-title {
+        border-left: 5px solid #28a745;
+        padding-left: 15px;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .export-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .btn-export {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-pdf {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-excel {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-print {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-export:hover {
+        opacity: 0.9;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px dashed #eee;
+    }
+
+    .info-label {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .info-value {
+        font-weight: 600;
+        color: #333;
+    }
+
+    /* Animasi */
+    .report-container {
+        animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .filter-form .row {
+            flex-direction: column;
+        }
+
+        .filter-form .col-md-3,
+        .filter-form .col-md-2 {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-filter {
+            width: 100%;
+        }
+    }
+</style>
+</head>
+
+<div class="report-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1>
+                <i class="bi bi-bar-chart-fill"></i>
+                Laporan Panen Jagung
+            </h1>
+            <p class="text-muted mt-2 mb-0">
+                Analisis dan rekap data panen dari lahan Anda
+            </p>
+        </div>
+
+        <div class="d-flex gap-2">
+            <select class="form-control" style="width: 150px;"
+                onchange="window.location='laporan.php?tahun='+this.value">
+
+                <?php
+                $tahun_sekarang = date('Y');
+                for ($th = $tahun_sekarang; $th >= $tahun_sekarang - 2; $th--) {
+                    $selected = ($th == $tahun) ? 'selected' : '';
+                    echo "<option value='$th' $selected>$th</option>";
+                }
+                ?>
+
+            </select>
+
+            <button class="btn btn-success" onclick="window.print()">
+                <i class="bi bi-printer-fill me-2"></i>
+                Cetak Laporan
+            </button>
+        </div>
     </div>
-    <div class="d-flex gap-2">
-        <select class="form-control" style="width: 150px;" onchange="window.location='laporan.php?tahun='+this.value">
-            <?php
-            $tahun_sekarang = date('Y');
-            for ($th = $tahun_sekarang; $th >= $tahun_sekarang - 2; $th--) {
-                $selected = ($th == $tahun) ? 'selected' : '';
-                echo "<option value='$th' $selected>$th</option>";
-            }
-            ?>
-        </select>
-        <button class="btn btn-success" onclick="window.print()">
-            <i class="bi bi-printer-fill me-2"></i>Cetak Laporan
-        </button>
-    </div>
-</div>
 
-<?php
-// Calculate totals
-$sql_modal = "SELECT SUM(p.biaya) as total_modal 
-              FROM perawatan p
-              JOIN musim_tanam m ON p.musim_tanam_id = m.id
-              WHERE YEAR(p.tanggal) = '$tahun'";
-$modal = $conn->query($sql_modal)->fetch_assoc()['total_modal'] ?? 0;
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="GET" class="filter-form">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-calendar3"></i> Tahun
+                    </label>
+                    <select name="tahun" class="form-select">
+                        <?php
+                        $tahun_sekarang = date('Y');
+                        // Ambil tahun dari database
+                        $query_tahun = "SELECT DISTINCT YEAR(tanggal_panen) as tahun FROM panen ORDER BY tahun DESC";
+                        $result_tahun = $conn->query($query_tahun);
 
-$sql_pendapatan = "SELECT SUM(total_pendapatan) as total_pendapatan 
-                  FROM panen p
-                  JOIN musim_tanam m ON p.musim_tanam_id = m.id
-                  WHERE YEAR(p.tanggal_panen) = '$tahun'";
-$pendapatan = $conn->query($sql_pendapatan)->fetch_assoc()['total_pendapatan'] ?? 0;
-
-$keuntungan = $pendapatan - $modal;
-$roi = ($modal > 0) ? round(($keuntungan / $modal) * 100) : 0;
-?>
-
-<!-- Summary Cards -->
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="stat-card danger">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Total Modal</div>
-                    <div class="stat-value">Rp <?= number_format($modal, 0) ?></div>
+                        if ($result_tahun->num_rows > 0) {
+                            while ($row_tahun = $result_tahun->fetch_assoc()) {
+                                $selected = ($tahun == $row_tahun['tahun']) ? 'selected' : '';
+                                echo "<option value='{$row_tahun['tahun']}' $selected>{$row_tahun['tahun']}</option>";
+                            }
+                        } else {
+                            for ($i = $tahun_sekarang; $i >= $tahun_sekarang - 2; $i--) {
+                                $selected = ($tahun == $i) ? 'selected' : '';
+                                echo "<option value='$i' $selected>$i</option>";
+                            }
+                        }
+                        ?>
+                    </select>
                 </div>
-                <i class="bi bi-wallet2 fa-2x text-danger"></i>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="stat-card success">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Total Pendapatan</div>
-                    <div class="stat-value">Rp <?= number_format($pendapatan, 0) ?></div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-calendar-month"></i> Bulan
+                    </label>
+                    <select name="bulan" class="form-select">
+                        <option value="all" <?= ($bulan == 'all') ? 'selected' : '' ?>>Semua Bulan</option>
+                        <?php
+                        $nama_bulan = [
+                            'Januari',
+                            'Februari',
+                            'Maret',
+                            'April',
+                            'Mei',
+                            'Juni',
+                            'Juli',
+                            'Agustus',
+                            'September',
+                            'Oktober',
+                            'November',
+                            'Desember'
+                        ];
+                        for ($i = 1; $i <= 12; $i++) {
+                            $selected = ($bulan == $i) ? 'selected' : '';
+                            echo "<option value='$i' $selected>$nama_bulan[$i1]</option>";
+                        }
+                        ?>
+                    </select>
                 </div>
-                <i class="bi bi-cash-coin fa-2x text-success"></i>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="stat-card warning">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-label">Keuntungan</div>
-                    <div class="stat-value">Rp <?= number_format($keuntungan, 0) ?></div>
-                    <small>ROI: <?= $roi ?>%</small>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-funnel-fill"></i> Tampilkan
+                    </button>
                 </div>
-                <i class="bi bi-graph-up-arrow fa-2x text-warning"></i>
+                <div class="col-md-2">
+                    <a href="laporan.php" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-4">
+            <div class="summary-card">
+                <div class="card-icon green">
+                    <i class="bi bi-tree-fill"></i>
+                </div>
+                <div class="card-info">
+                    <h4>Total Panen</h4>
+                    <div class="value"><?= number_format($statistik['total_transaksi'] ?? 0) ?> Kali</div>
+                    <div class="sub-value">Transaksi panen</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="summary-card">
+                <div class="card-icon blue">
+                    <i class="bi bi-box-seam-fill"></i>
+                </div>
+                <div class="card-info">
+                    <h4>Total Hasil</h4>
+                    <div class="value"><?= number_format($statistik['total_hasil_keseluruhan'] ?? 0) ?> Kg</div>
+                    <div class="sub-value">Tertinggi: <?= number_format($statistik['hasil_tertinggi'] ?? 0) ?> Kg</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="summary-card">
+                <div class="card-icon orange">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <div class="card-info">
+                    <h4>Total Pendapatan</h4>
+                    <div class="value">Rp <?= number_format($statistik['total_pendapatan_keseluruhan'] ?? 0) ?></div>
+                    <div class="sub-value">Rp <?= number_format($statistik['rata_rata_harga'] ?? 0) ?>/Kg</div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Charts Row -->
-<div class="row g-4 mb-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="bi bi-bar-chart me-2"></i>Produksi Jagung per Bulan (<?= $tahun ?>)</h5>
+    <!-- Grafik dan Statistik -->
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Chart Section -->
+            <div class="chart-container">
+                <canvas id="chartPanen"></canvas>
             </div>
-            <div class="card-body">
-                <canvas id="produksiChart" style="height: 300px;"></canvas>
+        </div>
+        <div class="col-md-4">
+            <!-- Statistik Cepat -->
+            <div class="table-container">
+                <h5 class="section-title"><i class="bi bi-info-circle-fill"></i> Informasi Periode</h5>
+                <?php
+                // Hitung total untuk periode yang dipilih
+                $total_periode = 0;
+                $total_pendapatan_periode = 0;
+                $rata_harga_periode = 0;
+                $jumlah_transaksi = 0;
+
+                if ($result_bulanan->num_rows > 0) {
+                    $result_bulanan->data_seek(0);
+                    while ($row = $result_bulanan->fetch_assoc()) {
+                        $total_periode += $row['total_hasil'];
+                        $total_pendapatan_periode += $row['total_pendapatan'];
+                        $jumlah_transaksi += $row['jumlah_panen'];
+                    }
+                    $rata_harga_periode = ($total_periode > 0) ? $total_pendapatan_periode / $total_periode : 0;
+                }
+                ?>
+                <div class="info-row">
+                    <span class="info-label"><i class="bi bi-calendar-check"></i> Periode:</span>
+                    <span class="info-value"><?= $bulan != 'all' ? $nama_bulan[$bulan - 1] : 'Semua Bulan' ?> <?= $tahun ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="bi bi-calculator"></i> Total Panen:</span>
+                    <span class="info-value"><?= number_format($jumlah_transaksi) ?> Kali</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="bi bi-box"></i> Total Hasil:</span>
+                    <span class="info-value"><?= number_format($total_periode) ?> Kg</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="bi bi-cash"></i> Total Pendapatan:</span>
+                    <span class="info-value">Rp <?= number_format($total_pendapatan_periode) ?></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="bi bi-currency-dollar"></i> Rata-rata Harga:</span>
+                    <span class="info-value">Rp <?= number_format($rata_harga_periode) ?>/Kg</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="bi bi-graph-up me-2"></i>Modal vs Pendapatan</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="keuanganChart" style="height: 300px;"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Land Analysis -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5><i class="bi bi-map-fill me-2"></i>Analisis per Lahan</h5>
-    </div>
-    <div class="card-body p-0">
+    <!-- Tabel Detail Panen -->
+    <div class="table-container mt-4">
+        <h5 class="section-title"><i class="bi bi-table"></i> Detail Panen <?= $bulan != 'all' ? 'Bulan ' . $nama_bulan[$bulan - 1] : '' ?> <?= $tahun ?></h5>
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
+            <table class="table table-hover table-striped">
+                <thead class="table-success">
                     <tr>
+                        <th>Tanggal</th>
                         <th>Lahan</th>
-                        <th>Luas (Ha)</th>
-                        <th>Jumlah Tanam</th>
-                        <th>Total Panen</th>
-                        <th>Produktivitas</th>
-                        <th>Total Modal</th>
+                        <th>Bibit</th>
+                        <th>Hasil (Kg)</th>
+                        <th>Harga/Kg</th>
                         <th>Total Pendapatan</th>
-                        <th>Keuntungan</th>
-                        <th>ROI</th>
+                        <th>Pembeli</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php
-                    $sql = "SELECT l.id, l.nama_lahan, l.luas_hektar,
-                            COUNT(DISTINCT m.id) as jumlah_tanam,
-                            COALESCE(SUM(p.hasil_kg), 0) as total_kg,
-                            COALESCE((SELECT SUM(biaya) FROM perawatan pr WHERE pr.musim_tanam_id IN (SELECT id FROM musim_tanam WHERE lahan_id = l.id)), 0) as total_modal,
-                            COALESCE(SUM(p.total_pendapatan), 0) as total_pendapatan
-                            FROM lahan l
-                            LEFT JOIN musim_tanam m ON l.id = m.lahan_id
-                            LEFT JOIN panen p ON m.id = p.musim_tanam_id
-                            GROUP BY l.id";
-                    $result = $conn->query($sql);
-
-                    $grand_total_modal = 0;
-                    $grand_total_pendapatan = 0;
-                    $grand_total_kg = 0;
-
-                    while ($row = $result->fetch_assoc()) {
-                        $untung = $row['total_pendapatan'] - $row['total_modal'];
-                        $roi_lahan = ($row['total_modal'] > 0) ? round(($untung / $row['total_modal']) * 100) : 0;
-                        $produktivitas = ($row['luas_hektar'] > 0) ? round($row['total_kg'] / $row['luas_hektar']) : 0;
-
-                        $grand_total_modal += $row['total_modal'];
-                        $grand_total_pendapatan += $row['total_pendapatan'];
-                        $grand_total_kg += $row['total_kg'];
-
-                        echo "<tr>";
-                        echo "<td><i class='bi bi-geo-fill me-2 text-success'></i>{$row['nama_lahan']}</td>";
-                        echo "<td>{$row['luas_hektar']} Ha</td>";
-                        echo "<td>{$row['jumlah_tanam']}x</td>";
-                        echo "<td>" . number_format($row['total_kg']) . " kg</td>";
-                        echo "<td><span class='badge bg-info'>{$produktivitas} kg/Ha</span></td>";
-                        echo "<td>Rp " . number_format($row['total_modal']) . "</td>";
-                        echo "<td>Rp " . number_format($row['total_pendapatan']) . "</td>";
-                        echo "<td class='" . ($untung >= 0 ? 'text-success' : 'text-danger') . " fw-bold'>Rp " . number_format($untung) . "</td>";
-                        echo "<td><span class='badge " . ($roi_lahan >= 0 ? 'bg-success' : 'bg-danger') . "'>{$roi_lahan}%</span></td>";
-                        echo "</tr>";
-                    }
-                    ?>
+                    <?php if ($result_panen->num_rows > 0): ?>
+                        <?php while ($row = $result_panen->fetch_assoc()): ?>
+                            <tr>
+                                <td>
+                                    <i class="bi bi-calendar3"></i>
+                                    <?= date('d/m/Y', strtotime($row['tanggal_panen'])) ?>
+                                </td>
+                                <td>
+                                    <?= htmlspecialchars($row['nama_lahan'] ?? '-') ?>
+                                    <small class="d-block text-muted"><?= htmlspecialchars($row['lokasi'] ?? '') ?></small>
+                                </td>
+                                <td>
+                                    <?= htmlspecialchars($row['nama_bibit'] ?? '-') ?>
+                                    <small class="d-block text-muted"><?= htmlspecialchars($row['sumber_bibit'] ?? '') ?></small>
+                                </td>
+                                <td class="fw-bold"><?= number_format($row['hasil_kg']) ?> Kg</td>
+                                <td>Rp <?= number_format($row['harga_jual']) ?></td>
+                                <td class="fw-bold text-success">Rp <?= number_format($row['total_pendapatan']) ?></td>
+                                <td><?= htmlspecialchars($row['pembeli'] ?? '-') ?></td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="bi bi-inbox-fill d-block fs-1 text-muted mb-2"></i>
+                                Tidak ada data panen untuk periode ini
+                            </td>
+                        </tr>
+                    <?php endif; ?>
                 </tbody>
-                <tfoot class="table-light fw-bold">
-                    <tr>
-                        <td colspan="3" class="text-end">TOTAL:</td>
-                        <td><?= number_format($grand_total_kg) ?> kg</td>
-                        <td></td>
-                        <td>Rp <?= number_format($grand_total_modal) ?></td>
-                        <td>Rp <?= number_format($grand_total_pendapatan) ?></td>
-                        <td colspan="2">Rp <?= number_format($grand_total_pendapatan - $grand_total_modal) ?></td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
     </div>
-</div>
 
-<!-- Production Summary -->
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="bi bi-trophy-fill me-2"></i>Pencapaian Terbaik</h5>
-            </div>
-            <div class="card-body">
-                <?php
-                // Best harvest
-                $best = $conn->query("SELECT p.*, l.nama_lahan FROM panen p
-                                    JOIN musim_tanam m ON p.musim_tanam_id = m.id
-                                    JOIN lahan l ON m.lahan_id = l.id
-                                    ORDER BY p.hasil_kg DESC LIMIT 1")->fetch_assoc();
-                ?>
-                <div class="d-flex align-items-center gap-3 p-3 bg-light rounded mb-3">
-                    <i class="bi bi-award-fill fa-3x text-warning"></i>
-                    <div>
-                        <h6 class="mb-1">Panen Terbanyak</h6>
-                        <p class="mb-0">
-                            <strong><?= $best['nama_lahan'] ?? '-' ?></strong> -
-                            <?= number_format($best['hasil_kg'] ?? 0) ?> kg
-                            (<?= isset($best['tanggal_panen']) ? date('d/m/Y', strtotime($best['tanggal_panen'])) : '' ?>)
-                        </p>
-                    </div>
+    <!-- Statistik per Lahan dan per Bibit -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="table-container">
+                <h5 class="section-title"><i class="bi bi-pin-map-fill"></i> Statistik per Lahan</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama Lahan</th>
+                                <th>Panen</th>
+                                <th>Total Hasil</th>
+                                <th>Rata-rata</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ($result_per_lahan->num_rows > 0): ?>
+                                <?php while ($row = $result_per_lahan->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($row['nama_lahan']) ?></td>
+                                        <td><?= $row['jumlah_panen'] ?>x</td>
+                                        <td><?= number_format($row['total_hasil']) ?> Kg</td>
+                                        <td><?= number_format($row['rata_rata_per_panen']) ?> Kg</td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="4" class="text-center">Belum ada data</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
+        </div>
 
-                <?php
-                // Best income
-                $best_income = $conn->query("SELECT p.*, l.nama_lahan FROM panen p
-                                        JOIN musim_tanam m ON p.musim_tanam_id = m.id
-                                        JOIN lahan l ON m.lahan_id = l.id
-                                        ORDER BY p.total_pendapatan DESC LIMIT 1")->fetch_assoc();
-                ?>
-                <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
-                    <i class="bi bi-cash-coin fa-3x text-success"></i>
-                    <div>
-                        <h6 class="mb-1">Pendapatan Tertinggi</h6>
-                        <p class="mb-0">
-                            <strong><?= $best_income['nama_lahan'] ?? '-' ?></strong> -
-                            Rp <?= number_format($best_income['total_pendapatan'] ?? 0) ?>
-                        </p>
-                    </div>
+        <div class="col-md-6">
+            <div class="table-container">
+                <h5 class="section-title"><i class="bi bi-flower1"></i> Statistik per Bibit</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama Bibit</th>
+                                <th>Panen</th>
+                                <th>Total Hasil</th>
+                                <th>Rata-rata</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ($result_per_bibit->num_rows > 0): ?>
+                                <?php while ($row = $result_per_bibit->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($row['nama_bibit']) ?></td>
+                                        <td><?= $row['jumlah_panen'] ?>x</td>
+                                        <td><?= number_format($row['total_hasil']) ?> Kg</td>
+                                        <td><?= number_format($row['rata_rata_hasil']) ?> Kg</td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="4" class="text-center">Belum ada data</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="bi bi-pie-chart-fill me-2"></i>Komposisi Biaya</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="biayaChart" style="height: 250px;"></canvas>
-            </div>
+    <!-- Ringkasan Tahunan -->
+    <div class="table-container mt-4">
+        <h5 class="section-title"><i class="bi bi-pie-chart-fill"></i> Ringkasan Tahunan</h5>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Tahun</th>
+                        <th>Jumlah Panen</th>
+                        <th>Total Hasil (Kg)</th>
+                        <th>Total Pendapatan</th>
+                        <th>Rata-rata Harga</th>
+                        <th>Lahan Aktif</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($result_ringkasan->num_rows > 0): ?>
+                        <?php while ($row = $result_ringkasan->fetch_assoc()): ?>
+                            <tr>
+                                <td><i class="bi bi-calendar-year"></i> <strong><?= $row['tahun'] ?></strong></td>
+                                <td><span class="badge bg-info"><?= $row['total_panen'] ?>x</span></td>
+                                <td><?= number_format($row['total_hasil']) ?> Kg</td>
+                                <td class="fw-bold text-success">Rp <?= number_format($row['total_pendapatan']) ?></td>
+                                <td>Rp <?= number_format($row['rata_harga']) ?></td>
+                                <td><?= $row['jumlah_lahan'] ?> lahan</td>
+                            </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <i class="bi bi-database-slash d-block fs-1 text-muted mb-2"></i>
+                                Belum ada data panen
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="export-buttons">
+            <button class="btn-export btn-pdf" onclick="exportToPDF()">
+                <i class="bi bi-file-pdf-fill"></i> Export PDF
+            </button>
+            <button class="btn-export btn-excel" onclick="exportToExcel()">
+                <i class="bi bi-file-excel-fill"></i> Export Excel
+            </button>
+            <button class="btn-export btn-print" onclick="window.print()">
+                <i class="bi bi-printer-fill"></i> Print
+            </button>
         </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<!-- Chart Scripts -->
 <script>
-    // Get data for charts
+    // Data untuk chart
     <?php
-    $bulan = [];
-    $produksi = [];
-    $modal_bulan = [];
-    $pendapatan_bulan = [];
+    // Reset pointer untuk query bulanan
+    $result_bulanan->data_seek(0);
+    $labels = [];
+    $data_hasil = [];
+    $data_pendapatan = [];
 
-    for ($b = 1; $b <= 12; $b++) {
-        $bulan[] = date('F', mktime(0, 0, 0, $b, 1));
-
-        // Production
-        $sql = "SELECT SUM(hasil_kg) as total FROM panen p
-            JOIN musim_tanam m ON p.musim_tanam_id = m.id
-            WHERE YEAR(p.tanggal_panen) = '$tahun' AND MONTH(p.tanggal_panen) = '$b'";
-        $prod = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
-        $produksi[] = $prod;
-
-        // Modal
-        $sql = "SELECT SUM(biaya) as total FROM perawatan pr
-            JOIN musim_tanam m ON pr.musim_tanam_id = m.id
-            WHERE YEAR(pr.tanggal) = '$tahun' AND MONTH(pr.tanggal) = '$b'";
-        $mod = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
-        $modal_bulan[] = $mod;
-
-        // Income
-        $sql = "SELECT SUM(total_pendapatan) as total FROM panen p
-            JOIN musim_tanam m ON p.musim_tanam_id = m.id
-            WHERE YEAR(p.tanggal_panen) = '$tahun' AND MONTH(p.tanggal_panen) = '$b'";
-        $pend = $conn->query($sql)->fetch_assoc()['total'] ?? 0;
-        $pendapatan_bulan[] = $pend;
+    while ($row = $result_bulanan->fetch_assoc()) {
+        $bulan_tahun = explode('-', $row['bulan']);
+        $labels[] = $nama_bulan[$bulan_tahun[1] - 1] . ' ' . $bulan_tahun[0];
+        $data_hasil[] = $row['total_hasil'];
+        $data_pendapatan[] = $row['total_pendapatan'];
     }
-
-    // Cost composition
-    $biaya_pupuk = $conn->query("SELECT SUM(biaya) as total FROM perawatan WHERE jenis='pupuk' AND YEAR(tanggal)='$tahun'")->fetch_assoc()['total'] ?? 0;
-    $biaya_obat = $conn->query("SELECT SUM(biaya) as total FROM perawatan WHERE jenis='obat' AND YEAR(tanggal)='$tahun'")->fetch_assoc()['total'] ?? 0;
-    $biaya_air = $conn->query("SELECT SUM(biaya) as total FROM perawatan WHERE jenis='air' AND YEAR(tanggal)='$tahun'")->fetch_assoc()['total'] ?? 0;
-    $biaya_lain = $modal - ($biaya_pupuk + $biaya_obat + $biaya_air);
     ?>
 
-    // Production Chart
-    new Chart(document.getElementById('produksiChart'), {
+    const ctx = document.getElementById('chartPanen').getContext('2d');
+    new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: <?= json_encode($bulan) ?>,
+            labels: <?= json_encode($labels) ?>,
             datasets: [{
-                label: 'Produksi (kg)',
-                data: <?= json_encode($produksi) ?>,
-                backgroundColor: '#2c5e2e',
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            }
-        }
-    });
-
-    // Financial Chart
-    new Chart(document.getElementById('keuanganChart'), {
-        type: 'line',
-        data: {
-            labels: <?= json_encode($bulan) ?>,
-            datasets: [{
-                    label: 'Modal',
-                    data: <?= json_encode($modal_bulan) ?>,
-                    borderColor: '#dc3545',
-                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                    tension: 0.4
+                    label: 'Total Hasil Panen (Kg)',
+                    data: <?= json_encode($data_hasil) ?>,
+                    borderColor: 'rgb(40, 167, 69)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.5)',
+                    yAxisID: 'y',
+                    type: 'bar'
                 },
                 {
-                    label: 'Pendapatan',
-                    data: <?= json_encode($pendapatan_bulan) ?>,
-                    borderColor: '#28a745',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    tension: 0.4
+                    label: 'Total Pendapatan (Rp)',
+                    data: <?= json_encode($data_pendapatan) ?>,
+                    borderColor: 'rgb(255, 193, 7)',
+                    backgroundColor: 'rgba(255, 193, 7, 0.5)',
+                    yAxisID: 'y1',
+                    type: 'line',
+                    tension: 0.1,
+                    fill: false
                 }
             ]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-
-    // Cost Composition Chart
-    new Chart(document.getElementById('biayaChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Pupuk', 'Obat Hama', 'Pengairan', 'Lainnya'],
-            datasets: [{
-                data: [<?= $biaya_pupuk ?>, <?= $biaya_obat ?>, <?= $biaya_air ?>, <?= $biaya_lain ?>],
-                backgroundColor: ['#2c5e2e', '#ffc107', '#17a2b8', '#6c757d'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
             plugins: {
+                title: {
+                    display: true,
+                    text: 'Grafik Hasil dan Pendapatan Panen <?= $tahun ?>',
+                    font: {
+                        size: 16
+                    }
+                },
                 legend: {
-                    position: 'bottom'
+                    display: true,
+                    position: 'top'
                 }
             },
-            cutout: '60%'
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Jumlah (Kg)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Pendapatan (Rp)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                },
+            }
         }
     });
-</script>
 
+    // Fungsi export (placeholder)
+    function exportToPDF() {
+        alert('Fitur export PDF akan segera tersedia');
+    }
+
+    function exportToExcel() {
+        alert('Fitur export Excel akan segera tersedia');
+    }
+</script>
 <?php include '../includes/footer.php'; ?>

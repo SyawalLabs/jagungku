@@ -14,9 +14,9 @@ if (!isset($_SESSION['user_id']) && basename($_SERVER['PHP_SELF']) != 'login.php
     <title>JagungKu - Dashboard Petani Modern</title>
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
 
-    <!-- Bootstrap Icons -->
+    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="../assets/bootstrap-icons/bootstrap-icons.css">
 
     <!-- Google Fonts - Inter -->
@@ -24,6 +24,7 @@ if (!isset($_SESSION['user_id']) && basename($_SERVER['PHP_SELF']) != 'login.php
 
     <!-- Custom Modern CSS -->
     <link rel="stylesheet" href="../assets/css/modern.css">
+    
 </head>
 
 <body>
