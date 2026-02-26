@@ -108,11 +108,6 @@
             }, 600);
             return false;
         });
-
-        // Add scroll top button if not exists
-        if ($('#scrollTop').length === 0) {
-            $('body').append('<div id="scrollTop" class="btn btn-success rounded-circle position-fixed" style="bottom: 20px; right: 20px; width: 50px; height: 50px; display: none; align-items: center; justify-content: center; z-index: 99;"><i class="fas fa-arrow-up"></i></div>');
-        }
     });
 </script>
 

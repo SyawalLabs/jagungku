@@ -20,13 +20,13 @@ if (isset($_POST['simpan'])) {
     if ($cek->num_rows > 0) {
         // Data sudah ada → lakukan UPDATE
         $stmt = $conn->prepare("UPDATE panen SET tanggal_panen = ?, hasil_kg = ?, harga_jual = ?, pembeli = ?, total_pendapatan = ? WHERE musim_tanam_id = ?");
-        $stmt->bind_param("siiisi", $tanggal_panen, $hasil_kg, $harga_jual, $pembeli, $total, $musim_tanam_id);
+        $stmt->bind_param("siiii", $tanggal_panen, $hasil_kg, $harga_jual, $pembeli, $total, $musim_tanam_id);
         $stmt->execute();
         $stmt->close();
     } else {
         // Data belum ada → lakukan INSERT
         $stmt = $conn->prepare("INSERT INTO panen (musim_tanam_id, tanggal_panen, hasil_kg, harga_jual, pembeli, total_pendapatan) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isiiis", $musim_tanam_id, $tanggal_panen, $hasil_kg, $harga_jual, $pembeli, $total);
+        $stmt->bind_param("isiiii", $musim_tanam_id, $tanggal_panen, $hasil_kg, $harga_jual, $pembeli, $total);
         $stmt->execute();
         $stmt->close();
     }

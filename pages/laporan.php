@@ -137,14 +137,6 @@ $result_per_bibit = $conn->query($query_per_bibit);
         padding: 20px;
     }
 
-    .report-header {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 15px;
-        margin-bottom: 30px;
-    }
-
     .filter-section {
         background: white;
         padding: 20px;
@@ -356,26 +348,6 @@ $result_per_bibit = $conn->query($query_per_bibit);
             <p class="text-muted mt-2 mb-0">
                 Analisis dan rekap data panen dari lahan Anda
             </p>
-        </div>
-
-        <div class="d-flex gap-2">
-            <select class="form-control" style="width: 150px;"
-                onchange="window.location='laporan.php?tahun='+this.value">
-
-                <?php
-                $tahun_sekarang = date('Y');
-                for ($th = $tahun_sekarang; $th >= $tahun_sekarang - 2; $th--) {
-                    $selected = ($th == $tahun) ? 'selected' : '';
-                    echo "<option value='$th' $selected>$th</option>";
-                }
-                ?>
-
-            </select>
-
-            <button class="btn btn-success" onclick="window.print()">
-                <i class="bi bi-printer-fill me-2"></i>
-                Cetak Laporan
-            </button>
         </div>
     </div>
 
@@ -750,7 +722,7 @@ $result_per_bibit = $conn->query($query_per_bibit);
                     borderColor: 'rgb(40, 167, 69)',
                     backgroundColor: 'rgba(40, 167, 69, 0.5)',
                     yAxisID: 'y',
-                    type: 'bar'
+                    type: 'bar',
                 },
                 {
                     label: 'Total Pendapatan (Rp)',
@@ -758,7 +730,7 @@ $result_per_bibit = $conn->query($query_per_bibit);
                     borderColor: 'rgb(255, 193, 7)',
                     backgroundColor: 'rgba(255, 193, 7, 0.5)',
                     yAxisID: 'y1',
-                    type: 'line',
+                    type: 'bar',
                     tension: 0.1,
                     fill: false
                 }
