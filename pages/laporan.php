@@ -680,7 +680,7 @@ $result_per_bibit = $conn->query($query_per_bibit);
         </div>
 
         <!-- Export Buttons -->
-        <div class="export-buttons">
+        <div id="#exportModal" class="export-buttons">
             <button class="btn-export btn-pdf" onclick="exportToPDF()">
                 <i class="bi bi-file-pdf-fill"></i> Export PDF
             </button>
@@ -693,6 +693,87 @@ $result_per_bibit = $conn->query($query_per_bibit);
         </div>
     </div>
 </div>
+
+<!-- Modal untuk Filter Export -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-download me-2"></i>Export Data Laporan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Pilih Format Export</label>
+                    <div class="d-flex gap-3" id="exportFormat">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="format" id="formatExcel" value="excel" checked>
+                            <label class="form-check-label" for="formatExcel">
+                                <i class="bi bi-file-excel-fill text-success"></i> Excel
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="format" id="formatPDF" value="pdf">
+                            <label class="form-check-label" for="formatPDF">
+                                <i class="bi bi-file-pdf-fill text-danger"></i> PDF
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Pilih Data</label>
+                    <select class="form-select" id="exportDataType">
+                        <option value="detail">Detail Panen (Tabel Utama)</option>
+                        <option value="ringkasan">Ringkasan Tahunan</option>
+                        <option value="per_lahan">Statistik per Lahan</option>
+                        <option value="per_bibit">Statistik per Bibit</option>
+                        <option value="semua">Semua Data Laporan</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Periode</label>
+                    <select class="form-select" id="exportPeriod">
+                        <option value="current">Periode Saat Ini (<?= $bulan != 'all' ? $nama_bulan[$bulan-1] : 'Semua Bulan' ?> <?= $tahun ?>)</option>
+                        <option value="all">Semua Data</option>
+                        <option value="tahun_ini">Tahun <?= date('Y') ?></option>
+                        <option value="custom">Kustom Tanggal</option>
+                    </select>
+                </div>
+                
+                <div id="customDateRange" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tanggal Awal</label>
+                            <input type="date" class="form-control" id="startDate" 
+                                   value="<?= date('Y-m-01') ?>">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tanggal Akhir</label>
+                            <input type="date" class="form-control" id="endDate" 
+                                   value="<?= date('Y-m-d') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info small">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    Data akan diexport sesuai dengan filter yang sedang ditampilkan.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-success" id="confirmExport">
+                    <i class="bi bi-download me-1"></i> Export Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script src="../assets/js/chart.min.js"></script>
 <script>
@@ -782,13 +863,59 @@ $result_per_bibit = $conn->query($query_per_bibit);
         }
     });
 
-    // Fungsi export (placeholder)
-    function exportToPDF() {
-        alert('Fitur export PDF akan segera tersedia');
-    }
+    // Tampilkan/sembunyikan custom date range
+document.getElementById('exportPeriod').addEventListener('change', function() {
+    const customRange = document.getElementById('customDateRange');
+    customRange.style.display = this.value === 'custom' ? 'block' : 'none';
+});
 
-    function exportToExcel() {
-        alert('Fitur export Excel akan segera tersedia');
-    }
+// Fungsi export Excel
+function exportToExcel() {
+    document.getElementById('formatExcel').checked = true;
+    const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
+    exportModal.show();
+    
+    document.getElementById('confirmExport').onclick = function() {
+        const dataType = document.getElementById('exportDataType').value;
+        const period = document.getElementById('exportPeriod').value;
+        
+        let url = 'export_laporan.php?format=excel&type=' + dataType + '&period=' + period;
+        url += '&tahun=<?= $tahun ?>&bulan=<?= $bulan ?>';
+        
+        if (period === 'custom') {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            url += '&start_date=' + startDate + '&end_date=' + endDate;
+        }
+        
+        window.open(url, '_blank');
+        exportModal.hide();
+    };
+}
+
+// Fungsi export PDF
+function exportToPDF() {
+    document.getElementById('formatPDF').checked = true;
+    const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
+    exportModal.show();
+    
+    document.getElementById('confirmExport').onclick = function() {
+        const dataType = document.getElementById('exportDataType').value;
+        const period = document.getElementById('exportPeriod').value;
+        
+        let url = 'export_laporan.php?format=pdf&type=' + dataType + '&period=' + period;
+        url += '&tahun=<?= $tahun ?>&bulan=<?= $bulan ?>';
+        
+        if (period === 'custom') {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            url += '&start_date=' + startDate + '&end_date=' + endDate;
+        }
+        
+        window.open(url, '_blank');
+        exportModal.hide();
+    };
+}
+
 </script>
 <?php include '../includes/footer.php'; ?>
