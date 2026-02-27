@@ -114,26 +114,97 @@ $keuntungan = $pendapatan - $modal;
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">
-                <h5><i class="bi bi-diagram-3-fill"></i></i>Distribusi Lahan</h5>
-            </div>
-            <div class="chart-container" style="height: 350px;">
-                <canvas id="lahanChart"></canvas>
-                <div class="mt-3">
-                    <?php
-                    $lahan_result = $conn->query("SELECT nama_lahan, luas_hektar FROM lahan");
-                    while ($l = $lahan_result->fetch_assoc()) {
-                        echo "<div class='d-flex justify-content-between align-items-center mb-2'>";
-                        echo "<span><i class='bi bi-circle-fill me-2' style='color: #2c5e2e;'></i>{$l['nama_lahan']}</span>";
-                        echo "</div>";
+   <div class="col-md-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-trophy-fill me-2" style="color: #ffc107;"></i>Top Lahan Panen Bulan Ini</h5>
+            <span class="badge bg-success" id="realTimeBadge">Live</span>
+        </div>
+        <div class="card-body p-0">
+            <!-- Daftar Top Lahan -->
+            <div class="list-group list-group-flush">
+                <?php
+                $bulan_ini = date('m');
+                $tahun_ini = date('Y');
+                
+                // Query untuk mendapatkan top 5 lahan dengan panen terbanyak bulan ini
+                $query = "SELECT 
+                            l.nama_lahan,
+                            l.luas_hektar,
+                            COALESCE(SUM(p.hasil_kg), 0) as total_panen
+                        FROM lahan l
+                        LEFT JOIN musim_tanam mt ON l.id = mt.lahan_id
+                        LEFT JOIN panen p ON mt.id = p.musim_tanam_id 
+                            AND MONTH(p.tanggal_panen) = '$bulan_ini' 
+                            AND YEAR(p.tanggal_panen) = '$tahun_ini'
+                        GROUP BY l.id, l.nama_lahan, l.luas_hektar
+                        ORDER BY total_panen DESC
+                        LIMIT 5";
+                
+                $result = $conn->query($query);
+                
+                if ($result && $result->num_rows > 0) {
+                    while ($row = $result->fetch_assoc()) {
+                        // Hitung kg/Ha
+                        $produktivitas = 0;
+                        if ($row['total_panen'] > 0 && $row['luas_hektar'] > 0) {
+                            $produktivitas = $row['total_panen'] / $row['luas_hektar'];
+                        }
+                        
+                        $total_panen = $row['total_panen'] > 0 ? number_format($row['total_panen'], 0, ',', '.') : '0';
+                        $produktivitas_format = $produktivitas > 0 ? number_format($produktivitas, 0, ',', '.') : '0';
+                        
+                        echo '<div class="list-group-item d-flex justify-content-between align-items-center py-3">';
+                        echo '<div>';
+                        echo '<h6 class="mb-1 fw-semibold">' . $row['nama_lahan'] . '</h6>';
+                        echo '<small class="text-muted">' . $produktivitas_format . ' Kg/Ha</small>';
+                        echo '</div>';
+                        echo '<span class="fw-bold text-success fs-6">' . $total_panen . ' Kg</span>';
+                        echo '</div>';
                     }
-                    ?>
-                </div>
+                } else {
+                    echo '<div class="text-center text-muted py-5">';
+                    echo '<i class="bi bi-inbox fs-1 d-block mb-3"></i>';
+                    echo 'Belum ada data panen bulan ini';
+                    echo '</div>';
+                }
+                ?>
+            </div>
+            
+            <!-- Footer -->
+            <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <i class="bi bi-calendar3 me-1"></i>
+                    <?php echo date('F Y'); ?>
+                </small>
+                <a href="laporan.php?tahun=<?php echo date('Y'); ?>&bulan=<?php echo date('m'); ?>" class="btn btn-sm btn-outline-success">
+                    Detail <i class="bi bi-arrow-right ms-1"></i>
+                </a>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Style -->
+<style>
+    #realTimeBadge {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    .list-group-item:hover {
+        background-color: rgba(44, 94, 46, 0.03);
+    }
+    
+    .fs-5 {
+        font-size: 1.1rem;
+    }
+</style>
 </div>
 
 <!-- Active Plantations -->
@@ -289,7 +360,7 @@ $keuntungan = $pendapatan - $modal;
 </div>
 
 <!-- Charts Script -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="../assets/js/chart.min.js"></script>
 <script>
     // Produksi Chart
     var ctx1 = document.getElementById('produksiChart').getContext('2d');
@@ -320,62 +391,7 @@ $keuntungan = $pendapatan - $modal;
             }
         }
     });
-
-    var ctx2 = document.getElementById('lahanChart').getContext('2d');
-
-    <?php
-    $labels = [];
-    $values = [];
-    $colors = [];
-
-    $lahan_result = $conn->query("SELECT nama_lahan, luas_hektar, jenis_tanah FROM lahan");
-
-    while ($l = $lahan_result->fetch_assoc()) {
-        $labels[] = $l['nama_lahan'];
-        $values[] = $l['luas_hektar'];
-
-        // warna grafik berdasarkan jenis tanah
-        if ($l['jenis_tanah'] == 'Latosol') {
-            $colors[] = '#8B4513'; // coklat
-        } elseif ($l['jenis_tanah'] == 'Grumosol') {
-            $colors[] = '#4B4B4B'; // abu gelap
-        } elseif ($l['jenis_tanah'] == 'Mediteran') {
-            $colors[] = '#B22222'; // merah bata
-        } elseif ($l['jenis_tanah'] == 'Andosol') {
-            $colors[] = '#2F2F2F'; // hitam abu
-        } else {
-            $colors[] = '#2c5e2e'; // default hijau
-        }
-    }
-    ?>
-
-    new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-            labels: <?= json_encode($labels) ?>,
-            datasets: [{
-                label: 'Luas Lahan (Ha)',
-                data: <?= json_encode($values) ?>,
-                backgroundColor: <?= json_encode($colors) ?>,
-                borderRadius: 5,
-                barThickness: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
+   
 </script>
 
 <?php include '../includes/footer.php'; ?>

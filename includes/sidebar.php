@@ -79,13 +79,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </li>
 
         <li class="nav-item">
-            <a href="keuangan.php" class="nav-link <?= ($current_page == 'keuangan.php') ? 'active' : '' ?>">
-                <i class="bi bi-cash-stack"></i>
-                <span>Keuangan & Produksi</span>
-            </a>
-        </li>
-
-        <li class="nav-item">
             <a href="laporan.php" class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'laporan.php' ? 'active' : '' ?>">
                 <i class="bi bi-bar-chart-fill"></i>
                 <span>Laporan</span>

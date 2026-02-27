@@ -401,9 +401,10 @@ $result_per_bibit = $conn->query($query_per_bibit);
                             'November',
                             'Desember'
                         ];
+
                         for ($i = 1; $i <= 12; $i++) {
                             $selected = ($bulan == $i) ? 'selected' : '';
-                            echo "<option value='$i' $selected>$nama_bulan[$i1]</option>";
+                            echo "<option value='$i' $selected>{$nama_bulan[$i - 1]}</option>";
                         }
                         ?>
                     </select>
@@ -693,7 +694,7 @@ $result_per_bibit = $conn->query($query_per_bibit);
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="../assets/js/chart.min.js"></script>
 <script>
     // Data untuk chart
     <?php
